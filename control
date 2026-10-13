@@ -1,0 +1,9 @@
+Package: com.qiu7c.wcatlas
+Name: WCAtlas
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: A focused and modern WeChat enhancement tweak.
+Maintainer: qiu7c
+Author: qiu7c
+Section: Tweaks
