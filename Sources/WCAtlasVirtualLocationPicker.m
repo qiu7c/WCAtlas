@@ -127,6 +127,10 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
 /// would be read as a pointer.
 @interface WCAtlasVirtualLocationPickerBridge : NSObject
 @property (nonatomic, weak, nullable) UIViewController *picker;
+/// The reference sets this on its own bridge before handing the bridge to the
+/// picker, so the picker very likely reads it back while it loads; a bridge that
+/// cannot answer is missing configuration rather than merely quiet.
+@property (nonatomic, weak, nullable) UIViewController *presentingController;
 @end
 
 @implementation WCAtlasVirtualLocationPickerBridge
@@ -196,6 +200,7 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
     }
     WCAtlasVirtualLocationPickerBridge *bridge = [WCAtlasVirtualLocationPickerBridge new];
     bridge.picker = picker;
+    bridge.presentingController = fromViewController;
     SEL delegateSelector = NSSelectorFromString(@"setDelegate:");
     if ([picker respondsToSelector:delegateSelector]) {
         ((void (*)(id, SEL, id))objc_msgSend)(picker, delegateSelector, bridge);
@@ -210,10 +215,12 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
     if (navigation) {
         WCAtlasVirtualLocationTrace(@"[VL] pushing picker");
         [navigation pushViewController:picker animated:YES];
+        WCAtlasVirtualLocationTrace(@"[VL] pushed picker");
     } else {
         WCAtlasVirtualLocationTrace(@"[VL] presenting picker");
         UINavigationController *wrapper = [[UINavigationController alloc] initWithRootViewController:picker];
         [fromViewController presentViewController:wrapper animated:YES completion:nil];
+        WCAtlasVirtualLocationTrace(@"[VL] presented picker");
     }
     return YES;
 }
