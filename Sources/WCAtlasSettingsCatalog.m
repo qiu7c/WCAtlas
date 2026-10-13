@@ -794,6 +794,8 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasPluginSections(NSUserDefaults *d
 
 static NSArray<WCAtlasSettingSection *> *WCAtlasVirtualLocationSections(void) {
     BOOL hasSelection = WCAtlasVirtualLocationHasSelection();
+    NSString *selectionName = [[NSUserDefaults.standardUserDefaults stringForKey:WCAtlasVirtualLocationNameKey] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if (!selectionName.length) selectionName = nil;
     NSArray<NSDictionary<NSString *, id> *> *presets = WCAtlasVirtualLocationPresets();
     NSMutableArray<WCAtlasSettingItem *> *presetItems = [NSMutableArray array];
     for (NSUInteger index = 0; index < presets.count; index++) {
@@ -817,7 +819,7 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasVirtualLocationSections(void) {
         [WCAtlasSettingSection sectionWithIdentifier:@"virtual-location-current" title:@"当前选定"
                                              footer:nil
                                               items:@[
-            WCAtlasItem(@"当前坐标", hasSelection ? @"已选定" : @"未选择", @"mappin.and.ellipse", WCAtlasSettingRowKindInfo, nil, hasSelection ? WCAtlasVirtualLocationCoordinateText() : @"未选择", WCAtlasSettingActionNone),
+            WCAtlasItem(@"当前坐标", hasSelection ? WCAtlasVirtualLocationCoordinateText() : @"未选择", @"mappin.and.ellipse", WCAtlasSettingRowKindInfo, nil, selectionName, WCAtlasSettingActionNone),
         ]],
         [WCAtlasSettingSection sectionWithIdentifier:@"virtual-location-actions" title:@"选择方式"
                                              footer:@"优先打开微信自带的地图选点页；打不开时会自动转到手动输入。"
