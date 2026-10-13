@@ -44,6 +44,33 @@ CGFloat WCAtlasSettingsSeparatorInsetLeading(BOOL showsIcon, BOOL child, CGFloat
     return leading + WCAtlasSettingsScale(WCAtlasSettingsIconColumnWidth + WCAtlasSettingsIconTitleSpacing, scale);
 }
 
+void WCAtlasSettingsApplyRowMetrics(UITableView *tableView, CGFloat scale) {
+    if (!tableView) return;
+    tableView.rowHeight = UITableViewAutomaticDimension;
+    tableView.estimatedRowHeight = MAX(WCAtlasSettingsRowMinHeight,
+                                       WCAtlasSettingsScale(WCAtlasSettingsEstimatedRowHeight, scale));
+}
+
+static NSString * const WCAtlasSettingsMinimumRowHeightIdentifier = @"WCAtlasSettingsMinimumRowHeight";
+
+void WCAtlasSettingsApplyMinimumRowHeight(UITableViewCell *cell, CGFloat scale) {
+    if (!cell) return;
+    CGFloat minimum = WCAtlasSettingsScale(WCAtlasSettingsRowMinHeight, scale);
+    for (NSLayoutConstraint *constraint in cell.contentView.constraints) {
+        if ([constraint.identifier isEqualToString:WCAtlasSettingsMinimumRowHeightIdentifier]) {
+            if (constraint.constant != minimum) constraint.constant = minimum;
+            return;
+        }
+    }
+    // Just below required, so taller content always wins and this only ever acts
+    // as a floor for compact single line rows.
+    NSLayoutConstraint *constraint =
+        [cell.contentView.heightAnchor constraintGreaterThanOrEqualToConstant:minimum];
+    constraint.identifier = WCAtlasSettingsMinimumRowHeightIdentifier;
+    constraint.priority = UILayoutPriorityRequired - 1;
+    constraint.active = YES;
+}
+
 #pragma mark - Typography
 
 static UIFont *WCAtlasSettingsFont(UIFontTextStyle style, CGFloat size, CGFloat weight, CGFloat scale) {
@@ -168,8 +195,7 @@ void WCAtlasSettingsApplyTableStyle(UITableView *tableView, CGFloat scale) {
                                                 WCAtlasSettingsRowContentLeading(NO, scale),
                                                 0.0,
                                                 WCAtlasSettingsScale(WCAtlasSettingsAccessoryTrailing, scale));
-    tableView.rowHeight = UITableViewAutomaticDimension;
-    tableView.estimatedRowHeight = WCAtlasSettingsScale(WCAtlasSettingsEstimatedRowHeight, scale);
+    WCAtlasSettingsApplyRowMetrics(tableView, scale);
     tableView.estimatedSectionHeaderHeight = WCAtlasSettingsScale(WCAtlasSettingsEstimatedSectionHeight, scale);
     tableView.estimatedSectionFooterHeight = WCAtlasSettingsScale(WCAtlasSettingsEstimatedSectionHeight, scale);
     tableView.cellLayoutMarginsFollowReadableWidth = NO;

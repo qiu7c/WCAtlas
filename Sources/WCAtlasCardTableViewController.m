@@ -14,6 +14,9 @@
     [super viewDidLoad];
     self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
     self.tableView.separatorColor = UIColor.separatorColor;
+    // Every page on this base gets the same row rhythm, which is why a page no
+    // longer needs to state a row height of its own.
+    WCAtlasSettingsApplyRowMetrics(self.tableView, 1.0);
 }
 
 - (void)tableView:(UITableView *)tableView
@@ -22,6 +25,8 @@ forRowAtIndexPath:(NSIndexPath *)indexPath {
     NSInteger rows = [tableView.dataSource tableView:tableView numberOfRowsInSection:indexPath.section];
     BOOL first = indexPath.row == 0;
     BOOL last = indexPath.row == rows - 1;
+
+    WCAtlasSettingsApplyMinimumRowHeight(cell, 1.0);
 
     UIView *cardBackground = cell.backgroundView;
     if (!cardBackground) {

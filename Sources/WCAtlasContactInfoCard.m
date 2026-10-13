@@ -50,7 +50,6 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = self.cardTitle;
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
     self.tableView.separatorInset = UIEdgeInsetsMake(0.0, 20.0, 0.0, 20.0);
 
     UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, CGRectGetWidth(self.tableView.bounds), 124.0)];

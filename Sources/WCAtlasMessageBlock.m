@@ -234,7 +234,6 @@ UIViewController *WCAtlasMessageBlockTypeController(NSString *username) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"屏蔽会话";
-    self.tableView.rowHeight = 62.0;
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addConversation)];
     self.searchBar = [UISearchBar new];
     self.searchBar.delegate = self;

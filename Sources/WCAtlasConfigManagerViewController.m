@@ -106,7 +106,6 @@ static id WCAtlasDefaultsValueFromJSONValue(id value) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"配置管理";
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
 }
 
 - (NSInteger)numberOfSectionsInTableView:(__unused UITableView *)tableView {

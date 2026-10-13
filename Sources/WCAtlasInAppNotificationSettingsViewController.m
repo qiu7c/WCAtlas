@@ -69,7 +69,6 @@
         @{ @"title": @"评论", @"symbol": @"bubble.left.fill", @"preview": @"bubble.left.fill" },
         @{ @"title": @"星标", @"symbol": @"star.fill", @"preview": @"star.fill" },
     ];
-    self.tableView.estimatedRowHeight = 50.0;
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {

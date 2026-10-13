@@ -553,8 +553,6 @@ static NSString *WCAtlasVoicePreviewTimeText(NSTimeInterval currentTime, NSTimeI
     [super viewDidLoad];
     self.title = self.currentFolderName.length ? self.currentFolderName :
         (self.selectionHandler ? @"快捷回复" : @"管理消息库");
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
-    self.tableView.rowHeight = 56.0;
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
     self.tableView.separatorInset = UIEdgeInsetsMake(0.0, 56.0, 0.0, 16.0);
     self.tableView.sectionHeaderHeight = 0.01;

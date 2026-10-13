@@ -103,6 +103,16 @@ UIImage *WCAtlasSettingsIconImage(NSString *symbolName, CGFloat scale);
 /// Disclosure chevron drawn at the shared size with the shared colour.
 UIImageView *WCAtlasSettingsChevronView(NSString *symbolName, CGFloat scale);
 
+/// Applies the shared row metrics: automatic height with the shared estimate, so
+/// the content and Dynamic Type decide the height while the token keeps the
+/// rhythm identical across pages.
+void WCAtlasSettingsApplyRowMetrics(UITableView *tableView, CGFloat scale);
+
+/// Floors a cell at the shared minimum row height, reusing the constraint it
+/// added before. The card base calls this for every cell it displays, so a page
+/// on that base gets the same minimum without touching its own code.
+void WCAtlasSettingsApplyMinimumRowHeight(UITableViewCell *cell, CGFloat scale);
+
 /// Applies the shared page background, separator and height estimates.
 void WCAtlasSettingsApplyTableStyle(UITableView *tableView, CGFloat scale);
 

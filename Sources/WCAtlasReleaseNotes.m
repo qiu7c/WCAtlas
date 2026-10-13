@@ -82,7 +82,6 @@ void WCAtlasMarkCurrentReleaseNotesPresented(void) {
     [super viewDidLoad];
     self.title = @"版本介绍";
     self.tableView.rowHeight = UITableViewAutomaticDimension;
-    self.tableView.estimatedRowHeight = 84.0;
 }
 
 - (NSInteger)numberOfSectionsInTableView:(__unused UITableView *)tableView {

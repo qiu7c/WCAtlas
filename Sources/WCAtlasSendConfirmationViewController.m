@@ -150,8 +150,6 @@ static NSDictionary *WCAtlasSendConfirmationConversation(id candidate, BOOL grou
     [super viewDidLoad];
     self.title = self.pickerTitle.length > 0 ? self.pickerTitle :
         (self.groupsOnly ? @"选择群聊" : (self.friendsOnly ? @"选择好友" : @"选择好友或群聊"));
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
-    self.tableView.rowHeight = 60.0;
     if (self.selectAllBlock || self.invertSelectionBlock) {
         NSMutableArray<UIBarButtonItem *> *bulkItems = [NSMutableArray array];
         if (self.selectAllBlock) {
@@ -347,8 +345,6 @@ void WCAtlasConfigureConversationPickerCompletion(UIViewController *picker,
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"发送前确认";
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
-    self.tableView.rowHeight = 60.0;
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd
                                                                                            target:self
                                                                                            action:@selector(addConversation)];

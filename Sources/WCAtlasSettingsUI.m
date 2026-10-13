@@ -86,7 +86,6 @@ static UIView *WCAtlasSettingsSwitchAccessory(UISwitch *toggle, BOOL expanded, B
 @interface WCAtlasSettingsCell ()
 @property (nonatomic, strong) WCAtlasSettingItem *settingItem;
 @property (nonatomic, copy) WCAtlasSettingsSwitchHandler switchHandler;
-@property (nonatomic, strong) NSLayoutConstraint *minimumHeightConstraint;
 @end
 
 @implementation WCAtlasSettingsCell
@@ -102,20 +101,6 @@ static UIView *WCAtlasSettingsSwitchAccessory(UISwitch *toggle, BOOL expanded, B
 
 - (void)toggleChanged:(UISwitch *)sender {
     if (self.switchHandler && self.settingItem) self.switchHandler(self.settingItem, sender.isOn);
-}
-
-- (void)applyMinimumRowHeight:(CGFloat)minimum {
-    if (!self.minimumHeightConstraint) {
-        // Just below required, so a taller content configuration always wins and
-        // this only ever acts as a floor for compact single line rows.
-        NSLayoutConstraint *constraint =
-            [self.contentView.heightAnchor constraintGreaterThanOrEqualToConstant:minimum];
-        constraint.priority = UILayoutPriorityRequired - 1;
-        constraint.active = YES;
-        self.minimumHeightConstraint = constraint;
-        return;
-    }
-    self.minimumHeightConstraint.constant = minimum;
 }
 
 - (void)configureWithItem:(WCAtlasSettingItem *)item
@@ -163,7 +148,7 @@ static UIView *WCAtlasSettingsSwitchAccessory(UISwitch *toggle, BOOL expanded, B
                                            WCAtlasSettingsSeparatorInsetLeading(showsIcon, item.child, scale),
                                            0.0,
                                            trailing);
-    [self applyMinimumRowHeight:WCAtlasSettingsScale(WCAtlasSettingsRowMinHeight, scale)];
+    WCAtlasSettingsApplyMinimumRowHeight(self, scale);
 
     if (item.kind == WCAtlasSettingRowKindSwitch) {
         UISwitch *toggle = [UISwitch new];

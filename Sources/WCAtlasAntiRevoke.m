@@ -348,7 +348,6 @@ BOOL WCAtlasHandleRevokeMessage(id messageManager, id incomingMessage) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"防撤回记录";
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
     UISearchBar *searchBar = [UISearchBar new];
     searchBar.delegate = self;
     searchBar.placeholder = @"搜索联系人或内容";

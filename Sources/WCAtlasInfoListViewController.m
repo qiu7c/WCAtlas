@@ -27,8 +27,6 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = self.listTitle;
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
-    self.tableView.rowHeight = 58.0;
     self.tableView.separatorInset = UIEdgeInsetsMake(0.0, 20.0, 0.0, 20.0);
     UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc]
         initWithTarget:self action:@selector(copyRowAtLongPress:)];
