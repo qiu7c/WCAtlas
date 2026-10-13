@@ -44,6 +44,14 @@ NSArray<WCAtlasReleaseNote *> *WCAtlasReleaseNotes(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         notes = @[
+            [WCAtlasReleaseNote noteWithVersion:@"1.0.1"
+                                     headline:@"滑动返回修复"
+                                        items:@[
+                [WCAtlasReleaseNoteItem itemWithTitle:@"首页会话归类"
+                                               detail:@"从首页的分类入口进入后，可从屏幕左边缘滑动返回上一级，不再只能点按导航栏的返回按钮。"],
+                [WCAtlasReleaseNoteItem itemWithTitle:@"稳定性"
+                                               detail:@"本次为修复版本，1.0.0 的增强功能与设置保持不变。"],
+            ]],
             [WCAtlasReleaseNote noteWithVersion:@"1.0.0"
                                      headline:@"首个正式版本"
                                         items:@[

@@ -20,7 +20,7 @@ NSString *const WCAtlasEnabledKey = @"com.qiu7c.wcatlas.enabled";
 NSString *const WCAtlasCollapsedFeaturesKey = @"com.qiu7c.wcatlas.ui.collapsed-features";
 static NSString *const WCAtlasExpandedCategoriesKey = @"com.qiu7c.wcatlas.ui.expanded-categories";
 
-NSString *const WCAtlasDisplayVersion = @"1.0.0";
+NSString *const WCAtlasDisplayVersion = @"1.0.1";
 static NSString *const WCAtlasChatGlassPseudoLiquid20MigrationKey = @"com.qiu7c.wcatlas.migration.chat-glass-pseudo-liquid-20-v1";
 
 static WCAtlasSettingItem *WCAtlasItem(NSString *title, NSString *subtitle, NSString *symbol,

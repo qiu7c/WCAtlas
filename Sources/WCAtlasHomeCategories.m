@@ -129,10 +129,35 @@ static NSString *WCAtlasHomeConversationTitle(NSString *userName) {
 
 #pragma mark - Native Homepage Sessions
 
+// The homepage category browser brings its own navigation controller: WeChat's
+// main frame is presented full screen, so the browser becomes the root view
+// controller of that stack. Neither UIKit's interactive pop gesture (there is
+// nothing to pop) nor a modal dismissal gesture (full screen presentations do
+// not get one) is available there, which used to leave the bar button as the
+// only way back. These helpers restore the usual edge swipe for that controller
+// tree only; WeChat's own navigation controllers are never touched.
+@interface WCAtlasHomeCategoryReturnGestureDelegate : NSObject <UIGestureRecognizerDelegate>
+@property (nonatomic, weak, nullable) UINavigationController *navigationController;
+@end
+
+@implementation WCAtlasHomeCategoryReturnGestureDelegate
+
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
+    (void)gestureRecognizer;
+    UINavigationController *navigationController = self.navigationController;
+    if (!navigationController) return NO;
+    // Swiping on the root view controller would leave the navigation bar in a
+    // broken state, so only pop when there is something to pop.
+    return navigationController.viewControllers.count > 1;
+}
+
+@end
+
 @interface WCAtlasHomeCategoryBrowserController : UITableViewController
 @property (nonatomic, copy) NSString *categoryID;
 @property (nonatomic, copy, nullable) NSString *folderID;
 @property (nonatomic, strong, nullable) UIColor *navigationBackgroundColor;
+@property (nonatomic, strong, nullable) WCAtlasHomeCategoryReturnGestureDelegate *returnGestureDelegate;
 - (void)applyBrowserNavigationAppearance;
 - (void)closeCategoryBrowser;
 - (void)leaveCategoryBrowser;
@@ -767,6 +792,7 @@ UISwipeActionsConfiguration *WCAtlasHomeCategoriesLeadingSwipeActions(id control
 - (void)viewDidLoad {
     [super viewDidLoad];
     [self applyBrowserNavigationAppearance];
+    [self installReturnGesturesIfNeeded];
     self.title = (self.folder ?: self.category)[@"title"] ?: @"分类";
     self.hidesBottomBarWhenPushed = YES;
     self.tableView.rowHeight = WCAtlasHomeCategoryRowHeight;
@@ -784,8 +810,57 @@ UISwipeActionsConfiguration *WCAtlasHomeCategoriesLeadingSwipeActions(id control
     self.navigationItem.leftBarButtonItem = back;
     self.navigationItem.rightBarButtonItem = settings;
 }
+
+- (BOOL)hasReturnEdgeGesture {
+    for (UIGestureRecognizer *recognizer in self.view.gestureRecognizers) {
+        if ([recognizer isKindOfClass:[UIScreenEdgePanGestureRecognizer class]] &&
+            ((UIScreenEdgePanGestureRecognizer *)recognizer).edges == UIRectEdgeLeft) return YES;
+    }
+    return NO;
+}
+
+- (void)installReturnGesturesIfNeeded {
+    UINavigationController *navigationController = self.navigationController;
+    if (!navigationController) return;
+
+    WCAtlasHomeCategoryReturnGestureDelegate *delegate = self.returnGestureDelegate;
+    if (!delegate) {
+        delegate = [WCAtlasHomeCategoryReturnGestureDelegate new];
+        delegate.navigationController = navigationController;
+        // Keep the delegate alive: the gesture recognizer only holds it weakly,
+        // and a nil delegate would let the gesture start on the root controller.
+        self.returnGestureDelegate = delegate;
+    }
+    UIGestureRecognizer *interactivePop = navigationController.interactivePopGestureRecognizer;
+    if (interactivePop) {
+        interactivePop.delegate = delegate;
+        interactivePop.enabled = YES;
+    }
+
+    // Only the browser presented straight from the homepage session list is the
+    // root of its navigation stack. That screen has no return gesture at all, so
+    // give it the same left edge swipe the pushed levels already get.
+    if (navigationController.viewControllers.firstObject == self && ![self hasReturnEdgeGesture]) {
+        UIScreenEdgePanGestureRecognizer *edge = [[UIScreenEdgePanGestureRecognizer alloc]
+            initWithTarget:self action:@selector(handleReturnEdgePan:)];
+        edge.edges = UIRectEdgeLeft;
+        [self.view addGestureRecognizer:edge];
+    }
+}
+
+- (void)handleReturnEdgePan:(UIScreenEdgePanGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer.state != UIGestureRecognizerStateEnded) return;
+    CGPoint translation = [gestureRecognizer translationInView:self.view];
+    CGPoint velocity = [gestureRecognizer velocityInView:self.view];
+    // Require a deliberate rightward drag so a touch that merely starts near the
+    // edge cannot close the browser by accident.
+    if (translation.x < 60.0 && velocity.x < 300.0) return;
+    [self closeCategoryBrowser];
+}
+
 - (void)viewWillAppear:(BOOL)animated {
     [self applyBrowserNavigationAppearance];
+    [self installReturnGesturesIfNeeded];
     [super viewWillAppear:animated];
     [self.tableView reloadData];
 }
