@@ -135,6 +135,18 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
 
 @implementation WCAtlasVirtualLocationPickerBridge
 
+/// The reference's selector table carries this name, and WeChat builds the picker
+/// page around what its delegate answers, so the done item is very likely gated on
+/// this method existing. The argument is deliberately untouched: its type is
+/// unknown, and the coordinate can be read from the picker itself, which is safer
+/// than treating an unknown pointer as an object.
+- (void)saveFromPicker:(id)sender {
+    (void)sender;
+    WCAtlasVirtualLocationTrace(@"[VL] picker asked to save");
+    WCAtlasVirtualLocationCaptureCoordinateFromPicker(self.picker);
+    WCAtlasVirtualLocationFinishPicking();
+}
+
 - (void)onFinishSelectedLocation {
     WCAtlasVirtualLocationTrace(@"[VL] picker finished");
     // The picker says it has a selection at this point, so this is the moment to
@@ -226,6 +238,17 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
     WCAtlasVirtualLocationSetPicking(YES);
     // The reference pushes when there is a stack and presents otherwise, which is
     // also what keeps the picker's own back button working.
+    // The reference's page carries a done item in the top right. If WeChat only
+    // builds one when its host supplies it, this gives the page the same
+    // affordance, and the nil check keeps it from doubling up on one the picker
+    // made itself. The system item renders the localised title.
+    if (!picker.navigationItem.rightBarButtonItem) {
+        picker.navigationItem.rightBarButtonItem =
+            [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
+                                                          target:bridge
+                                                          action:@selector(saveFromPicker:)];
+    }
+
     UINavigationController *navigation = fromViewController.navigationController;
     if (navigation) {
         WCAtlasVirtualLocationTrace(@"[VL] pushing picker");
