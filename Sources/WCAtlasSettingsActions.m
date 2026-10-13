@@ -691,7 +691,7 @@ static char WCAtlasContactSearchLogicKey;
         }
         case WCAtlasSettingActionVirtualLocationUsePreset: {
             NSArray<NSDictionary<NSString *, id> *> *presets = WCAtlasVirtualLocationPresets();
-            NSUInteger index = (NSUInteger)item.key.integerValue;
+            NSUInteger index = (NSUInteger)item.defaultsKey.integerValue;
             if (index < presets.count) {
                 NSDictionary<NSString *, id> *preset = presets[index];
                 CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake([preset[WCAtlasVirtualLocationLatitudeKey] doubleValue],
