@@ -122,9 +122,11 @@ BOOL WCAtlasVirtualLocationIsPicking(void) {
 
 static UIViewController *WCAtlasVirtualLocationWindowRootViewController(void) {
     UIWindow *window = nil;
+    UIWindow *firstWindow = nil;
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         if (![scene isKindOfClass:UIWindowScene.class]) continue;
         for (UIWindow *candidate in ((UIWindowScene *)scene).windows) {
+            if (!firstWindow) firstWindow = candidate;
             if (candidate.isKeyWindow) {
                 window = candidate;
                 break;
@@ -132,7 +134,10 @@ static UIViewController *WCAtlasVirtualLocationWindowRootViewController(void) {
         }
         if (window) break;
     }
-    if (!window) window = UIApplication.sharedApplication.keyWindow;
+    // The scene lookup is the whole story: the deprecated keyWindow fallback it
+    // used to carry is both warned about and redundant, and the first window of
+    // the first scene still beats having none at all.
+    if (!window) window = firstWindow;
     return window.rootViewController;
 }
 

@@ -1,5 +1,6 @@
 #import "WCAtlasListEditorViewController.h"
 #import "WCAtlasEnhancements.h"
+#import "WCAtlasSettingsTheme.h"
 
 @interface WCAtlasListEditorViewController () <UITextViewDelegate>
 @property (nonatomic, copy) NSString *editorTitle;
@@ -48,7 +49,7 @@
     textView.font = [UIFont monospacedSystemFontOfSize:15.0 weight:UIFontWeightRegular];
     textView.textColor = UIColor.labelColor;
     textView.textContainerInset = UIEdgeInsetsMake(14.0, 12.0, 14.0, 12.0);
-    textView.layer.cornerRadius = 8.0;
+    textView.layer.cornerRadius = WCAtlasSettingsInnerCornerRadius;
     textView.layer.borderWidth = 1.0 / UIScreen.mainScreen.scale;
     textView.layer.borderColor = UIColor.separatorColor.CGColor;
     textView.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive;
