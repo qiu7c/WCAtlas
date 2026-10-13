@@ -15,6 +15,7 @@
 #import "WCAtlasHomeCategories.h"
 #import "WCAtlasChatTTS.h"
 #import "WCAtlasVirtualLocation.h"
+#import "WCAtlasVirtualLocationPicker.h"
 #import "WCAtlasNavigationAppearance.h"
 #import <stdlib.h>
 
@@ -806,7 +807,7 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasVirtualLocationSections(void) {
             WCAtlasItem(@"当前坐标", hasSelection ? @"已选定" : @"未选择", @"mappin.and.ellipse", WCAtlasSettingRowKindInfo, nil, hasSelection ? WCAtlasVirtualLocationCoordinateText() : @"未选择", WCAtlasSettingActionNone),
         ]],
         [WCAtlasSettingSection sectionWithIdentifier:@"virtual-location-actions" title:@"选择方式"
-                                             footer:@"优先打开微信自带的地图选点页；打不开时会自动转到手动输入。"
+                                             footer:[@"优先打开微信自带的地图选点页；打不开时会自动转到手动输入。" stringByAppendingString:WCAtlasVirtualLocationPickerTraceText()]
                                               items:@[
             WCAtlasItem(@"选择定位", @"在微信地图上选点", @"map", WCAtlasSettingRowKindDetail, nil, @"打开", WCAtlasSettingActionVirtualLocationPick),
             WCAtlasItem(@"手动输入经纬度", @"可收藏常用坐标并微调", @"square.and.pencil", WCAtlasSettingRowKindDetail, nil, hasSelection ? WCAtlasVirtualLocationCoordinateText() : @"输入", WCAtlasSettingActionVirtualLocationManual),

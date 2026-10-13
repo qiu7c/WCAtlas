@@ -19,6 +19,35 @@ static id WCAtlasVirtualLocationActiveBridge;
 static BOOL WCAtlasVirtualLocationPickerHooksInstalled;
 static void (^WCAtlasVirtualLocationFinishHandler)(void);
 
+/// The app's own log lives in memory and dies with a crash, which is exactly the
+/// case this diagnostic has to survive, so the picker also records its steps in a
+/// small file, and the settings page reads them back.
+static NSString *WCAtlasVirtualLocationTracePath(void) {
+    NSArray<NSString *> *library = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
+    NSString *directory = library.firstObject ?: NSTemporaryDirectory();
+    return [directory stringByAppendingPathComponent:@"WCAtlasVirtualLocationTrace.plist"];
+}
+
+static void WCAtlasVirtualLocationTrace(NSString *format, ...) {
+    va_list arguments;
+    va_start(arguments, format);
+    NSString *line = [[NSString alloc] initWithFormat:format arguments:arguments];
+    va_end(arguments);
+    if (line.length == 0) return;
+    WCAtlasLogAlways(@"[VL] %@", line);
+    NSString *path = WCAtlasVirtualLocationTracePath();
+    NSMutableArray<NSString *> *lines = [[NSArray arrayWithContentsOfFile:path] mutableCopy] ?: [NSMutableArray array];
+    [lines addObject:line];
+    while (lines.count > 16) [lines removeObjectAtIndex:0];
+    [lines writeToFile:path atomically:YES];
+}
+
+NSString *WCAtlasVirtualLocationPickerTraceText(void) {
+    NSArray<NSString *> *lines = [NSArray arrayWithContentsOfFile:WCAtlasVirtualLocationTracePath()];
+    if (lines.count == 0) return @"";
+    return [@"\n" stringByAppendingString:[lines componentsJoinedByString:@"\n"]];
+}
+
 #pragma mark - Coordinate extraction
 
 typedef CLLocationCoordinate2D (*WCAtlasVirtualLocationCoordinateMessage)(id, SEL);
@@ -68,7 +97,7 @@ static BOOL WCAtlasVirtualLocationCaptureCoordinateFromPicker(id picker) {
     for (NSString *name in @[@"currLocation", @"getLocationPOIItem"]) {
         SEL selector = NSSelectorFromString(name);
         if (![picker respondsToSelector:selector]) {
-            WCAtlasLogAlways(@"[VL] picker has no %@", name);
+            WCAtlasVirtualLocationTrace(@"[VL] picker has no %@", name);
             continue;
         }
         id value = ((id (*)(id, SEL))objc_msgSend)(picker, selector);
@@ -103,7 +132,7 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
 @implementation WCAtlasVirtualLocationPickerBridge
 
 - (void)onFinishSelectedLocation {
-    WCAtlasLogAlways(@"[VL] picker finished");
+    WCAtlasVirtualLocationTrace(@"[VL] picker finished");
     // The picker says it has a selection at this point, so this is the moment to
     // read it back through the accessors that were verified to exist in the
     // reference build, rather than silently keeping nothing.
@@ -111,7 +140,7 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
 }
 
 - (void)onCancelSeletctedLocation {
-    WCAtlasLogAlways(@"[VL] picker cancelled");
+    WCAtlasVirtualLocationTrace(@"[VL] picker cancelled");
     // WeChat's own spelling, typo included.
     WCAtlasVirtualLocationFinishPicking();
 }
@@ -149,12 +178,12 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
     if (!fromViewController) return NO;
     Class pickerClass = objc_getClass(WCAtlasVirtualLocationPickerClassName.UTF8String);
     if (!pickerClass) {
-        WCAtlasLogAlways(@"[VL] class not found: %@", WCAtlasVirtualLocationPickerClassName);
+        WCAtlasVirtualLocationTrace(@"[VL] class not found: %@", WCAtlasVirtualLocationPickerClassName);
         return NO;
     }
     SEL initializer = NSSelectorFromString(@"initWithSceneType:OnlyUseUserLocation:");
     if (![pickerClass instancesRespondToSelector:initializer]) {
-        WCAtlasLogAlways(@"[VL] initializer missing");
+        WCAtlasVirtualLocationTrace(@"[VL] initializer missing");
         return NO;
     }
     WCAtlasVirtualLocationInstallPickerHooks(pickerClass);
@@ -162,7 +191,7 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
     UIViewController *picker = initializerMessage([pickerClass alloc], initializer,
                                                   WCAtlasVirtualLocationPickerSceneType, NO);
     if (!picker) {
-        WCAtlasLogAlways(@"[VL] picker init returned nil");
+        WCAtlasVirtualLocationTrace(@"[VL] picker init returned nil");
         return NO;
     }
     WCAtlasVirtualLocationPickerBridge *bridge = [WCAtlasVirtualLocationPickerBridge new];
@@ -179,10 +208,10 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
     // also what keeps the picker's own back button working.
     UINavigationController *navigation = fromViewController.navigationController;
     if (navigation) {
-        WCAtlasLogAlways(@"[VL] pushing picker");
+        WCAtlasVirtualLocationTrace(@"[VL] pushing picker");
         [navigation pushViewController:picker animated:YES];
     } else {
-        WCAtlasLogAlways(@"[VL] presenting picker");
+        WCAtlasVirtualLocationTrace(@"[VL] presenting picker");
         UINavigationController *wrapper = [[UINavigationController alloc] initWithRootViewController:picker];
         [fromViewController presentViewController:wrapper animated:YES completion:nil];
     }
