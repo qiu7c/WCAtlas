@@ -116,8 +116,7 @@
 
 - (void)applySettingsPageScale {
     CGFloat scale = [self settingsPageScale];
-    self.tableView.estimatedRowHeight = MAX(WCAtlasSettingsRowMinHeight,
-                                            WCAtlasSettingsScale(WCAtlasSettingsEstimatedRowHeight, scale));
+    WCAtlasSettingsApplyRowMetrics(self.tableView, scale);
     self.tableView.estimatedSectionHeaderHeight = WCAtlasSettingsScale(WCAtlasSettingsEstimatedSectionHeight, scale);
     self.tableView.estimatedSectionFooterHeight = WCAtlasSettingsScale(WCAtlasSettingsEstimatedSectionHeight, scale);
     self.tableView.separatorInset = UIEdgeInsetsMake(0.0,
