@@ -2,7 +2,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface WCAtlasFriendRelationCheckViewController : UITableViewController
+#import "WCAtlasCardTableViewController.h"
+
+@interface WCAtlasFriendRelationCheckViewController : WCAtlasCardTableViewController
 @end
 
 NS_ASSUME_NONNULL_END

@@ -87,7 +87,7 @@ static BOOL WCAtlasFriendRelationOpenProfile(UIViewController *source, NSString 
 
 @end
 
-@interface WCAtlasFriendRelationResultViewController : UITableViewController
+@interface WCAtlasFriendRelationResultViewController : WCAtlasCardTableViewController
 @property(nonatomic, copy) NSString *verdict;
 @property(nonatomic, copy) NSString *pageTitle;
 @property(nonatomic, copy) NSArray<NSDictionary<NSString *, id> *> *items;
