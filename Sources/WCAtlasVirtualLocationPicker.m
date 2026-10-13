@@ -173,6 +173,15 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
     WCAtlasVirtualLocationTrace(@"[VL] picker asked to save");
     WCAtlasVirtualLocationCaptureCoordinateFromPicker(self.picker);
     WCAtlasVirtualLocationFinishPicking();
+    // The reporter's point: saving replaced the coordinate but left the picker page
+    // on screen. Leave the page the way the reference does, popping when the picker
+    // sits on a stack and dismissing when it was presented on its own.
+    UINavigationController *navigation = self.picker.navigationController;
+    if (navigation && navigation.viewControllers.count > 1) {
+        [navigation popViewControllerAnimated:YES];
+    } else if (self.picker.presentingViewController) {
+        [self.picker dismissViewControllerAnimated:YES completion:nil];
+    }
 }
 
 - (void)onFinishSelectedLocation {
