@@ -689,6 +689,19 @@ static char WCAtlasContactSearchLogicKey;
             [self reload];
             break;
         }
+        case WCAtlasSettingActionVirtualLocationUsePreset: {
+            NSArray<NSDictionary<NSString *, id> *> *presets = WCAtlasVirtualLocationPresets();
+            NSUInteger index = (NSUInteger)item.key.integerValue;
+            if (index < presets.count) {
+                NSDictionary<NSString *, id> *preset = presets[index];
+                CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake([preset[WCAtlasVirtualLocationLatitudeKey] doubleValue],
+                                                                              [preset[WCAtlasVirtualLocationLongitudeKey] doubleValue]);
+                NSString *presetName = preset[WCAtlasVirtualLocationNameKey];
+                WCAtlasVirtualLocationSetCoordinate(coordinate, presetName.length ? presetName : nil);
+                [self reload];
+            }
+            break;
+        }
         case WCAtlasSettingActionOfficialTelegram: [self openOfficialTelegram]; break;
         case WCAtlasSettingActionFindFriend: [self presentFindFriend]; break;
         case WCAtlasSettingActionOpenChatByID: [self presentOpenChatByID]; break;

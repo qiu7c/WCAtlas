@@ -92,6 +92,7 @@ typedef NS_ENUM(NSInteger, WCAtlasSettingAction) {
     WCAtlasSettingActionVirtualLocationPick,
     WCAtlasSettingActionVirtualLocationManual,
     WCAtlasSettingActionVirtualLocationClear,
+    WCAtlasSettingActionVirtualLocationUsePreset,
 };
 
 @interface WCAtlasSettingItem : NSObject

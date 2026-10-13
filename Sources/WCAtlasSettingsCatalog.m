@@ -794,6 +794,19 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasPluginSections(NSUserDefaults *d
 
 static NSArray<WCAtlasSettingSection *> *WCAtlasVirtualLocationSections(void) {
     BOOL hasSelection = WCAtlasVirtualLocationHasSelection();
+    NSArray<NSDictionary<NSString *, id> *> *presets = WCAtlasVirtualLocationPresets();
+    NSMutableArray<WCAtlasSettingItem *> *presetItems = [NSMutableArray array];
+    for (NSUInteger index = 0; index < presets.count; index++) {
+        NSDictionary<NSString *, id> *preset = presets[index];
+        NSString *presetName = preset[WCAtlasVirtualLocationNameKey];
+        NSString *presetDetail = [NSString stringWithFormat:@"%.5f, %.5f",
+                                  [preset[WCAtlasVirtualLocationLatitudeKey] doubleValue],
+                                  [preset[WCAtlasVirtualLocationLongitudeKey] doubleValue]];
+        [presetItems addObject:WCAtlasItem(presetName.length ? presetName : @"未命名坐标", presetDetail, @"star",
+                                           WCAtlasSettingRowKindDetail,
+                                           [NSString stringWithFormat:@"%lu", (unsigned long)index],
+                                           @"使用", WCAtlasSettingActionVirtualLocationUsePreset)];
+    }
     return @[
         [WCAtlasSettingSection sectionWithIdentifier:@"virtual-location-switch" title:@"定位"
                                              footer:@"开启后在微信内使用你选定的坐标，关闭会立即恢复真实定位。"
@@ -813,6 +826,9 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasVirtualLocationSections(void) {
             WCAtlasItem(@"手动输入经纬度", @"可收藏常用坐标并微调", @"square.and.pencil", WCAtlasSettingRowKindDetail, nil, hasSelection ? WCAtlasVirtualLocationCoordinateText() : @"输入", WCAtlasSettingActionVirtualLocationManual),
             WCAtlasItem(@"清除定位", hasSelection ? @"回到真实定位" : @"当前没有设置", @"trash", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionVirtualLocationClear),
         ]],
+        [WCAtlasSettingSection sectionWithIdentifier:@"virtual-location-favorites" title:@"收藏地址"
+                                             footer:presets.count ? @"点一下即可设为当前定位。" : @"在手动输入经纬度里可以收藏常用坐标。"
+                                              items:presetItems],
     ];
 }
 
