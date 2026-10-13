@@ -702,6 +702,25 @@ static char WCAtlasContactSearchLogicKey;
             }
             break;
         }
+        case WCAtlasSettingActionVirtualLocationSavePreset: {
+            if (!WCAtlasVirtualLocationHasSelection()) break;
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"收藏此坐标"
+                                                                          message:WCAtlasVirtualLocationCoordinateText()
+                                                                   preferredStyle:UIAlertControllerStyleAlert];
+            [alert addTextFieldWithConfigurationHandler:^(UITextField *field) {
+                field.placeholder = @"名称，例如：公司";
+            }];
+            __weak typeof(self) weakSelf = self;
+            [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+            [alert addAction:[UIAlertAction actionWithTitle:@"保存" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+                NSString *name = [alert.textFields.firstObject.text stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+                WCAtlasVirtualLocationAddPreset(name.length > 0 ? name : WCAtlasVirtualLocationCoordinateText(),
+                                                WCAtlasVirtualLocationCoordinate());
+                [weakSelf reload];
+            }]];
+            [self.viewController presentViewController:alert animated:YES completion:nil];
+            break;
+        }
         case WCAtlasSettingActionOfficialTelegram: [self openOfficialTelegram]; break;
         case WCAtlasSettingActionFindFriend: [self presentFindFriend]; break;
         case WCAtlasSettingActionOpenChatByID: [self presentOpenChatByID]; break;

@@ -10,32 +10,33 @@ extern void MSHookMessageEx(Class cls, SEL selector, IMP replacement, IMP *origi
 NSString *const WCAtlasBlackBackItemKey = @"com.qiu7c.wcatlas.interface.black-back-item";
 
 UIColor *WCAtlasBackChevronColor(void) {
+    // Pure black is what was asked for and stays the light mode answer, but a black
+    // chevron on a dark bar is invisible, so the dark interface style gets white.
+    if (UITraitCollection.currentTraitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
+        return UIColor.whiteColor;
+    }
     return UIColor.blackColor;
 }
 
 UIImage *WCAtlasBackChevronImage(void) {
-    static UIImage *image;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        // Drawn at the size the system chevron occupies next to a 17pt title.
-        // The stroke is inset by half its width so the round caps are not clipped
-        // by the image bounds.
-        CGSize size = CGSizeMake(13.0, 22.0);
-        UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:size];
-        UIImage *drawn = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
-            UIBezierPath *path = [UIBezierPath bezierPath];
-            [path moveToPoint:CGPointMake(10.1, 2.2)];
-            [path addLineToPoint:CGPointMake(2.2, 11.0)];
-            [path addLineToPoint:CGPointMake(10.1, 19.8)];
-            path.lineWidth = 2.4;
-            path.lineCapStyle = kCGLineCapRound;
-            path.lineJoinStyle = kCGLineJoinRound;
-            [WCAtlasBackChevronColor() setStroke];
-            [path stroke];
-        }];
-        image = [drawn imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-    });
-    return image;
+    // Drawn at the size the system chevron occupies next to a 17pt title.
+    // The stroke is inset by half its width so the round caps are not clipped
+    // by the image bounds. It is not cached: the colour follows the interface
+    // style, so a cached image would keep whichever style was drawn first.
+    CGSize size = CGSizeMake(13.0, 22.0);
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:size];
+    UIImage *drawn = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        UIBezierPath *path = [UIBezierPath bezierPath];
+        [path moveToPoint:CGPointMake(10.1, 2.2)];
+        [path addLineToPoint:CGPointMake(2.2, 11.0)];
+        [path addLineToPoint:CGPointMake(10.1, 19.8)];
+        path.lineWidth = 2.4;
+        path.lineCapStyle = kCGLineCapRound;
+        path.lineJoinStyle = kCGLineJoinRound;
+        [WCAtlasBackChevronColor() setStroke];
+        [path stroke];
+    }];
+    return [drawn imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
 }
 
 BOOL WCAtlasNavigationAppearanceIsOwnedViewController(UIViewController *controller) {

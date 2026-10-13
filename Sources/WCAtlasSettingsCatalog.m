@@ -809,7 +809,11 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasVirtualLocationSections(void) {
                                            [NSString stringWithFormat:@"%lu", (unsigned long)index],
                                            @"使用", WCAtlasSettingActionVirtualLocationUsePreset)];
     }
-    return @[
+    if (WCAtlasVirtualLocationHasSelection()) {
+        [presetItems addObject:WCAtlasItem(@"把当前坐标存为收藏", WCAtlasVirtualLocationCoordinateText(), @"bookmark",
+                                           WCAtlasSettingRowKindDetail, nil, @"保存",
+                                           WCAtlasSettingActionVirtualLocationSavePreset)];
+    }    return @[
         [WCAtlasSettingSection sectionWithIdentifier:@"virtual-location-switch" title:@"定位"
                                              footer:@"开启后在微信内使用你选定的坐标，关闭会立即恢复真实定位。"
                                               items:@[
