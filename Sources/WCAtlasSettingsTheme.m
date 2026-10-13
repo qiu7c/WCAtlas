@@ -150,9 +150,10 @@ UIImage *WCAtlasSettingsIconImage(NSString *symbolName, CGFloat scale) {
                             weight:UIImageSymbolWeightRegular];
     UIImage *glyph = [UIImage systemImageNamed:symbolName];
     if (!glyph) glyph = [UIImage systemImageNamed:@"circle.grid.2x2"];
-    UIImage *tinted = [[glyph imageWithConfiguration:configuration]
-        imageWithTintColor:WCAtlasSettingsIconTintColor()
-             renderingMode:UIImageRenderingModeAlwaysOriginal];
+    // No colour is baked in here. The row sets imageProperties.tintColor, which is a
+    // dynamic colour, so the glyph has to stay a template: pre-tinting produced a
+    // static bitmap that kept the light mode colour after a switch to dark.
+    UIImage *tinted = [glyph imageWithConfiguration:configuration];
 
     CGSize canvas = CGSizeMake(column, column);
     UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat defaultFormat];
@@ -170,6 +171,9 @@ UIImage *WCAtlasSettingsIconImage(NSString *symbolName, CGFloat scale) {
                                       drawSize.width,
                                       drawSize.height)];
     }];
+    // The canvas is a freshly drawn bitmap and those ignore tinting, so it has to be
+    // marked as a template for the row's dynamic tint colour to reach it at all.
+    image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
     if (image) [WCAtlasSettingsIconCache() setObject:image forKey:key];
     return image ?: [UIImage new];
 }
