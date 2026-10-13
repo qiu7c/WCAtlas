@@ -10,7 +10,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// itself never depends on WeChat internals.
 ///
 /// `onFinish` runs once the picker is gone, so the page underneath can refresh.
-BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController * _Nullable fromViewController,
+FOUNDATION_EXPORT BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController * _Nullable fromViewController,
                                                void (^ _Nullable onFinish)(void));
 
 NS_ASSUME_NONNULL_END
