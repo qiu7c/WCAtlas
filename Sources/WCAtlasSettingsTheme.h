@@ -42,8 +42,12 @@ extern const CGFloat WCAtlasSettingsAccessorySpacing;
 extern const CGFloat WCAtlasSettingsChevronSize;
 /// Upper bound for a trailing value label before it truncates.
 extern const CGFloat WCAtlasSettingsValueMaxWidth;
-/// Separator start, aligned with the title's left edge (row inset + icon column + gap).
-extern const CGFloat WCAtlasSettingsSeparatorInsetLeading;
+/// Leading content inset of a row: the shared inset, plus the nested indent when
+/// the row is a child of an expandable feature.
+CGFloat WCAtlasSettingsRowContentLeading(BOOL child, CGFloat scale);
+/// Where a row's separator starts. It follows the row's own text, so it moves
+/// past the icon column and its gap when the row shows an icon.
+CGFloat WCAtlasSettingsSeparatorInsetLeading(BOOL showsIcon, BOOL child, CGFloat scale);
 /// Estimated row height handed to the table view.
 extern const CGFloat WCAtlasSettingsEstimatedRowHeight;
 /// Estimated section header and footer height handed to the table view.

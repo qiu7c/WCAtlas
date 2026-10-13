@@ -17,7 +17,6 @@ const CGFloat WCAtlasSettingsAccessoryTrailing = 16.0;
 const CGFloat WCAtlasSettingsAccessorySpacing = 8.0;
 const CGFloat WCAtlasSettingsChevronSize = 12.0;
 const CGFloat WCAtlasSettingsValueMaxWidth = 132.0;
-const CGFloat WCAtlasSettingsSeparatorInsetLeading = 48.0;
 const CGFloat WCAtlasSettingsEstimatedRowHeight = 56.0;
 const CGFloat WCAtlasSettingsEstimatedSectionHeight = 36.0;
 const CGFloat WCAtlasSettingsSectionTopPadding = 16.0;
@@ -33,6 +32,16 @@ const CGFloat WCAtlasSettingsProfileSearchSpacing = 12.0;
 
 CGFloat WCAtlasSettingsScale(CGFloat value, CGFloat scale) {
     return value * (scale > 0.0 ? scale : 1.0);
+}
+
+CGFloat WCAtlasSettingsRowContentLeading(BOOL child, CGFloat scale) {
+    return WCAtlasSettingsScale(WCAtlasSettingsRowInsetH + (child ? WCAtlasSettingsChildIndent : 0.0), scale);
+}
+
+CGFloat WCAtlasSettingsSeparatorInsetLeading(BOOL showsIcon, BOOL child, CGFloat scale) {
+    CGFloat leading = WCAtlasSettingsRowContentLeading(child, scale);
+    if (!showsIcon) return leading;
+    return leading + WCAtlasSettingsScale(WCAtlasSettingsIconColumnWidth + WCAtlasSettingsIconTitleSpacing, scale);
 }
 
 #pragma mark - Typography
@@ -153,8 +162,10 @@ void WCAtlasSettingsApplyTableStyle(UITableView *tableView, CGFloat scale) {
     if (!tableView) return;
     tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
     tableView.separatorColor = UIColor.separatorColor;
+    // Default only: every settings row sets its own inset so the separator
+    // follows that row's own text.
     tableView.separatorInset = UIEdgeInsetsMake(0.0,
-                                                WCAtlasSettingsScale(WCAtlasSettingsSeparatorInsetLeading, scale),
+                                                WCAtlasSettingsRowContentLeading(NO, scale),
                                                 0.0,
                                                 WCAtlasSettingsScale(WCAtlasSettingsAccessoryTrailing, scale));
     tableView.rowHeight = UITableViewAutomaticDimension;

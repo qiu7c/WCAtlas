@@ -121,7 +121,7 @@
     self.tableView.estimatedSectionHeaderHeight = WCAtlasSettingsScale(WCAtlasSettingsEstimatedSectionHeight, scale);
     self.tableView.estimatedSectionFooterHeight = WCAtlasSettingsScale(WCAtlasSettingsEstimatedSectionHeight, scale);
     self.tableView.separatorInset = UIEdgeInsetsMake(0.0,
-                                                     WCAtlasSettingsScale(WCAtlasSettingsSeparatorInsetLeading, scale),
+                                                     WCAtlasSettingsRowContentLeading(NO, scale),
                                                      0.0,
                                                      WCAtlasSettingsScale(WCAtlasSettingsAccessoryTrailing, scale));
     if (self.profileHeader) {
@@ -436,8 +436,11 @@
     WCAtlasSettingItem *item = [self itemAtIndexPath:indexPath];
     BOOL masterEnabled = [NSUserDefaults.standardUserDefaults boolForKey:WCAtlasEnabledKey];
     BOOL expanded = item.defaultsKey.length == 0 || ![self.collapsedFeatureKeys containsObject:item.defaultsKey];
+    // Icons are kept for the root page's top level feature switches only. Nested
+    // rows and the sub category pages render without an icon column.
+    BOOL showsIcon = self.category == WCAtlasSettingsCategoryRoot && !item.child;
     __weak typeof(self) weakSelf = self;
-    [cell configureWithItem:item masterEnabled:masterEnabled expanded:expanded scale:[self settingsPageScale] switchHandler:^(WCAtlasSettingItem *changedItem, BOOL enabled) {
+    [cell configureWithItem:item masterEnabled:masterEnabled expanded:expanded showsIcon:showsIcon scale:[self settingsPageScale] switchHandler:^(WCAtlasSettingItem *changedItem, BOOL enabled) {
         [weakSelf switchItem:changedItem changedTo:enabled];
     }];
     return cell;

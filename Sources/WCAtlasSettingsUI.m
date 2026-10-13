@@ -121,6 +121,7 @@ static UIView *WCAtlasSettingsSwitchAccessory(UISwitch *toggle, BOOL expanded, B
 - (void)configureWithItem:(WCAtlasSettingItem *)item
             masterEnabled:(BOOL)masterEnabled
                  expanded:(BOOL)expanded
+                showsIcon:(BOOL)showsIcon
                      scale:(CGFloat)scale
             switchHandler:(WCAtlasSettingsSwitchHandler)switchHandler {
     self.settingItem = item;
@@ -145,18 +146,23 @@ static UIView *WCAtlasSettingsSwitchAccessory(UISwitch *toggle, BOOL expanded, B
     content.secondaryTextProperties.adjustsFontForContentSizeCategory = YES;
     content.secondaryTextProperties.color = UIColor.secondaryLabelColor;
     content.secondaryTextProperties.numberOfLines = 0;
-    content.image = WCAtlasSettingsIconImage(item.symbol, scale);
+    content.image = showsIcon ? WCAtlasSettingsIconImage(item.symbol, scale) : nil;
     content.imageProperties.tintColor = WCAtlasSettingsIconTintColor();
     CGSize iconColumn = CGSizeMake(WCAtlasSettingsScale(WCAtlasSettingsIconColumnWidth, scale),
                                    WCAtlasSettingsScale(WCAtlasSettingsIconColumnWidth, scale));
     content.imageProperties.maximumSize = iconColumn;
     WCAtlasSettingsApplyIconTitleSpacing(content, WCAtlasSettingsScale(WCAtlasSettingsIconTitleSpacing, scale));
-    CGFloat leading = WCAtlasSettingsScale(item.child ? WCAtlasSettingsRowInsetH + WCAtlasSettingsChildIndent
-                                                      : WCAtlasSettingsRowInsetH, scale);
+    CGFloat leading = WCAtlasSettingsRowContentLeading(item.child, scale);
     CGFloat vertical = WCAtlasSettingsScale(WCAtlasSettingsRowVerticalPadding, scale);
     CGFloat trailing = WCAtlasSettingsScale(WCAtlasSettingsAccessoryTrailing, scale);
     content.directionalLayoutMargins = NSDirectionalEdgeInsetsMake(vertical, leading, vertical, trailing);
     self.contentConfiguration = content;
+    // A row without an icon starts its text one icon column earlier, so the
+    // separator has to be set per row rather than once on the table.
+    self.separatorInset = UIEdgeInsetsMake(0.0,
+                                           WCAtlasSettingsSeparatorInsetLeading(showsIcon, item.child, scale),
+                                           0.0,
+                                           trailing);
     [self applyMinimumRowHeight:WCAtlasSettingsScale(WCAtlasSettingsRowMinHeight, scale)];
 
     if (item.kind == WCAtlasSettingRowKindSwitch) {
@@ -309,8 +315,20 @@ static void WCAtlasHideSearchBarBackground(UIView *view) {
         initWithTarget:self action:@selector(badgeTapped)]];
     [_badgeLabel setContentCompressionResistancePriority:UILayoutPriorityRequired
                                                  forAxis:UILayoutConstraintAxisHorizontal];
+    // The badge must never stretch: it stays exactly as wide as its own text.
+    [_badgeLabel setContentHuggingPriority:UILayoutPriorityRequired
+                                   forAxis:UILayoutConstraintAxisHorizontal];
+    [_nicknameLabel setContentHuggingPriority:UILayoutPriorityDefaultHigh
+                                      forAxis:UILayoutConstraintAxisHorizontal];
 
-    _identityRow = [[UIStackView alloc] initWithArrangedSubviews:@[_nicknameLabel, _badgeLabel]];
+    // This spacer absorbs the slack of the fill aligned column above. Without it
+    // that slack is handed to whichever arranged subview hugs least, which pushed
+    // the badge to the far right and stretched it.
+    UIView *identitySpacer = [UIView new];
+    [identitySpacer setContentHuggingPriority:1 forAxis:UILayoutConstraintAxisHorizontal];
+    [identitySpacer setContentCompressionResistancePriority:1 forAxis:UILayoutConstraintAxisHorizontal];
+
+    _identityRow = [[UIStackView alloc] initWithArrangedSubviews:@[_nicknameLabel, _badgeLabel, identitySpacer]];
     _identityRow.axis = UILayoutConstraintAxisHorizontal;
     _identityRow.alignment = UIStackViewAlignmentCenter;
     _identityRow.spacing = WCAtlasSettingsAccessorySpacing;
