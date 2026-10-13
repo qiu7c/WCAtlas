@@ -2,6 +2,7 @@
 #import "WCAtlasLogging.h"
 #import "WCAtlasEnhancements.h"
 #import "WCAtlasSettingsCatalog.h"
+#import "WCAtlasSettingsTheme.h"
 #import "WCAtlasSettingsViewController.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
@@ -582,7 +583,7 @@ void WCAtlasPluginManagerRegisterSavedQuickSwitches(void) {
     if (lastRow) corners |= kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
     UIView *cardBackground = [UIView new];
     cardBackground.backgroundColor = WCPPluginCardColor();
-    cardBackground.layer.cornerRadius = (firstRow || lastRow) ? 16.0 : 0.0;
+    cardBackground.layer.cornerRadius = (firstRow || lastRow) ? WCAtlasSettingsCornerRadius : 0.0;
     cardBackground.layer.cornerCurve = kCACornerCurveContinuous;
     cardBackground.layer.maskedCorners = corners;
     cell.backgroundColor = UIColor.clearColor;

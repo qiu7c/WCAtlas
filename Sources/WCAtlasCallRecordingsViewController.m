@@ -188,12 +188,10 @@
 
 @implementation WCAtlasCallRecordingsViewController
 
-- (instancetype)init { return [self initWithStyle:UITableViewStyleInsetGrouped]; }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"通话录音";
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
         initWithTitle:@"刷新" style:UIBarButtonItemStylePlain target:self action:@selector(reloadRecordings)];
     [self reloadRecordings];
