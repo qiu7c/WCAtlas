@@ -4,6 +4,7 @@
 #import "WCAtlasSettingsCatalog.h"
 #import "WCAtlasSettingsModels.h"
 #import "WCAtlasSettingsUI.h"
+#import "WCAtlasSettingsTheme.h"
 #import "WCAtlasAntiRevoke.h"
 #import "WCAtlasEnhancements.h"
 #import "WCAtlasInterfaceTweaks.h"
@@ -72,13 +73,12 @@
     [self collapseFeaturesForInitialEntry];
     self.title = [self titleForCategory:self.category];
     self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeNever;
-    self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
-    self.tableView.rowHeight = UITableViewAutomaticDimension;
-    self.tableView.estimatedRowHeight = 56.0;
+    // Page background, separator and height estimates come from the shared
+    // tokens; the duplicated background assignment that lived here is gone.
+    WCAtlasSettingsApplyTableStyle(self.tableView, 1.0);
     self.tableView.sectionHeaderHeight = UITableViewAutomaticDimension;
     self.tableView.sectionFooterHeight = UITableViewAutomaticDimension;
     if (@available(iOS 15.0, *)) self.tableView.sectionHeaderTopPadding = 0.0;
-    self.tableView.cellLayoutMarginsFollowReadableWidth = NO;
     [self.tableView registerClass:WCAtlasSettingsCell.class forCellReuseIdentifier:@"WCAtlasSettingsCell"];
     UILongPressGestureRecognizer *quickSwitchGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(quickSwitchLongPressed:)];
     quickSwitchGesture.minimumPressDuration = 0.55;
@@ -116,9 +116,14 @@
 
 - (void)applySettingsPageScale {
     CGFloat scale = [self settingsPageScale];
-    self.tableView.estimatedRowHeight = MAX(48.0, 56.0 * scale);
-    self.tableView.estimatedSectionHeaderHeight = MAX(28.0, 36.0 * scale);
-    self.tableView.estimatedSectionFooterHeight = MAX(28.0, 36.0 * scale);
+    self.tableView.estimatedRowHeight = MAX(WCAtlasSettingsRowMinHeight,
+                                            WCAtlasSettingsScale(WCAtlasSettingsEstimatedRowHeight, scale));
+    self.tableView.estimatedSectionHeaderHeight = WCAtlasSettingsScale(WCAtlasSettingsEstimatedSectionHeight, scale);
+    self.tableView.estimatedSectionFooterHeight = WCAtlasSettingsScale(WCAtlasSettingsEstimatedSectionHeight, scale);
+    self.tableView.separatorInset = UIEdgeInsetsMake(0.0,
+                                                     WCAtlasSettingsScale(WCAtlasSettingsSeparatorInsetLeading, scale),
+                                                     0.0,
+                                                     WCAtlasSettingsScale(WCAtlasSettingsAccessoryTrailing, scale));
     if (self.profileHeader) {
         CGFloat width = CGRectGetWidth(self.tableView.bounds);
         CGFloat height = [self.profileHeader preferredHeightForWidth:width scale:scale];
@@ -153,8 +158,13 @@
     [super viewDidLayoutSubviews];
     if (!self.profileHeader) return;
     CGFloat width = CGRectGetWidth(self.tableView.bounds);
-    if (fabs(CGRectGetWidth(self.profileHeader.frame) - width) < 0.5) return;
     CGFloat height = [self.profileHeader preferredHeightForWidth:width scale:[self settingsPageScale]];
+    // The header now measures its own height, so a Dynamic Type change has to
+    // re-apply it even when the width did not move. Re-applying the same values
+    // returns early on the next pass, which keeps this out of a layout loop.
+    BOOL widthChanged = fabs(CGRectGetWidth(self.profileHeader.frame) - width) >= 0.5;
+    BOOL heightChanged = fabs(CGRectGetHeight(self.profileHeader.frame) - height) >= 0.5;
+    if (!widthChanged && !heightChanged) return;
     self.profileHeader.frame = CGRectMake(0.0, 0.0, width, height);
     self.tableView.tableHeaderView = self.profileHeader;
 }
@@ -400,16 +410,21 @@
     return [self visibleSections][section].items.count;
 }
 
-- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    return [self visibleSections][section].title;
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    NSArray<WCAtlasSettingSection *> *sections = [self visibleSections];
+    if (section < 0 || section >= sections.count) return nil;
+    // Titles keep the section's own casing (no upper-casing) and align with the
+    // card edge through the shared header configuration.
+    return WCAtlasSettingsSectionHeaderView(tableView, sections[section].title, [self settingsPageScale]);
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
     (void)tableView;
     NSArray<WCAtlasSettingSection *> *sections = [self visibleSections];
-    if (self.category == WCAtlasSettingsCategoryRoot && section == 0 &&
-        section < sections.count && sections[section].title.length == 0) return 8.0;
-    return UITableViewAutomaticDimension;
+    if (section < 0 || section >= sections.count) return 0.0;
+    // An untitled section collapses to a small gap, which is what keeps the
+    // first card on the root page close to the top.
+    return WCAtlasSettingsSectionHeaderHeight(sections[section].title, [self settingsPageScale]);
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {

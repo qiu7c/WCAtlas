@@ -1,4 +1,5 @@
 #import "WCAtlasCardTableViewController.h"
+#import "WCAtlasSettingsTheme.h"
 
 #import <QuartzCore/QuartzCore.h>
 
@@ -29,7 +30,9 @@ forRowAtIndexPath:(NSIndexPath *)indexPath {
     }
     cardBackground.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
     cardBackground.layer.cornerCurve = kCACornerCurveContinuous;
-    cardBackground.layer.cornerRadius = (first || last) ? 14.0 : 0.0;
+    // Card radius comes from the shared token, so a page that decorates its own
+    // cells cannot drift from this one (the plugin page used 16.0 before).
+    cardBackground.layer.cornerRadius = (first || last) ? WCAtlasSettingsCornerRadius : 0.0;
     cell.backgroundColor = UIColor.clearColor;
     cell.contentView.backgroundColor = UIColor.clearColor;
     if (first && last) {

@@ -2,68 +2,82 @@
 #import "WCAtlasIdentityBadge.h"
 #import "WCAtlasAccount.h"
 #import "WCAtlasSettingsCatalog.h"
+#import "WCAtlasSettingsTheme.h"
 #import <math.h>
 
-static UIImage *WCAtlasSettingsSymbol(NSString *name) {
-    UIImage *image = [UIImage systemImageNamed:name];
-    return image ?: [UIImage systemImageNamed:@"circle.grid.2x2"];
-}
-
-static UIImageView *WCAtlasSettingsChevron(NSString *name, CGFloat scale) {
-    UIImageSymbolConfiguration *configuration = [UIImageSymbolConfiguration configurationWithPointSize:12.0 * scale
-                                                                                                  weight:UIImageSymbolWeightSemibold];
-    UIImageView *chevron = [[UIImageView alloc] initWithImage:[[UIImage systemImageNamed:name] imageWithConfiguration:configuration]];
-    chevron.tintColor = UIColor.tertiaryLabelColor;
-    chevron.contentMode = UIViewContentModeScaleAspectFit;
-    return chevron;
+// The gap between the fixed icon column and the title. UIListContentConfiguration
+// is expected to expose imageToTextPadding, but it is applied through KVC and
+// only when the property is really there, so the tweak still builds and runs if a
+// given SDK does not declare it. Losing it only shifts the separator a few
+// points; the icon column itself stays exactly one width wide either way.
+static void WCAtlasSettingsApplyIconTitleSpacing(UIListContentConfiguration *content, CGFloat spacing) {
+    if ([content respondsToSelector:NSSelectorFromString(@"setImageToTextPadding:")]) {
+        [content setValue:@(spacing) forKey:@"imageToTextPadding"];
+    }
 }
 
 static UIView *WCAtlasSettingsDetailAccessory(NSString *valueText, CGFloat scale) {
-    CGFloat height = 32.0 * scale;
-    CGFloat chevronWidth = 9.0 * scale;
-    CGFloat spacing = valueText.length > 0 ? 7.0 * scale : 0.0;
+    CGFloat spacing = valueText.length > 0 ? WCAtlasSettingsScale(WCAtlasSettingsAccessorySpacing, scale) : 0.0;
+    CGFloat chevronWidth = WCAtlasSettingsScale(WCAtlasSettingsChevronSize, scale);
     UILabel *value = nil;
     CGFloat valueWidth = 0.0;
+    CGFloat valueHeight = 0.0;
     if (valueText.length > 0) {
         value = [UILabel new];
         value.text = valueText;
-        value.font = [[UIFontMetrics metricsForTextStyle:UIFontTextStyleSubheadline]
-            scaledFontForFont:[UIFont systemFontOfSize:15.0 * scale]];
+        value.font = WCAtlasSettingsValueFont(scale);
         value.adjustsFontForContentSizeCategory = YES;
-        value.textColor = UIColor.tertiaryLabelColor;
+        value.textColor = WCAtlasSettingsValueColor();
         value.textAlignment = NSTextAlignmentRight;
         value.adjustsFontSizeToFitWidth = YES;
         value.minimumScaleFactor = 0.75;
-        valueWidth = MIN(132.0 * scale, [value sizeThatFits:CGSizeMake(CGFLOAT_MAX, height)].width);
+        // Measure without a height bound. The old code clamped the measurement to
+        // a fixed 32pt box, so a raised Dynamic Type size clipped the value.
+        CGSize measured = [value sizeThatFits:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)];
+        valueWidth = MIN(WCAtlasSettingsScale(WCAtlasSettingsValueMaxWidth, scale), ceil(measured.width));
+        valueHeight = MAX(ceil(value.font.lineHeight), ceil(measured.height));
     }
+    UIImageView *chevron = WCAtlasSettingsChevronView(@"chevron.right", scale);
+    CGFloat chevronHeight = ceil(chevron.intrinsicContentSize.height);
+    CGFloat height = MAX(valueHeight, MAX(chevronHeight, chevronWidth));
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0,
                                                                  valueWidth + spacing + chevronWidth,
                                                                  height)];
     if (value) {
-        value.frame = CGRectMake(0.0, 0.0, valueWidth, height);
+        value.frame = CGRectMake(0.0, floor((height - valueHeight) * 0.5), valueWidth, valueHeight);
         [container addSubview:value];
     }
-    UIImageView *chevron = WCAtlasSettingsChevron(@"chevron.right", scale);
-    chevron.frame = CGRectMake(valueWidth + spacing, 0.0, chevronWidth, height);
+    chevron.frame = CGRectMake(valueWidth + spacing,
+                               floor((height - chevronHeight) * 0.5),
+                               chevronWidth,
+                               chevronHeight);
     [container addSubview:chevron];
     return container;
 }
 
-static UIView *WCAtlasSettingsExpandableSwitchAccessory(UISwitch *toggle, BOOL expanded, CGFloat scale) {
+static UIView *WCAtlasSettingsSwitchAccessory(UISwitch *toggle, BOOL expanded, BOOL hasChildren, CGFloat scale) {
     [toggle sizeToFit];
-    CGFloat chevronWidth = 10.0 * scale;
-    CGFloat spacing = 8.0 * scale;
-    CGFloat height = MAX(toggle.bounds.size.height, 32.0 * scale);
+    CGFloat chevronWidth = WCAtlasSettingsScale(WCAtlasSettingsChevronSize, scale);
+    CGFloat spacing = WCAtlasSettingsScale(WCAtlasSettingsAccessorySpacing, scale);
+    CGFloat toggleWidth = toggle.bounds.size.width;
+    CGFloat toggleHeight = toggle.bounds.size.height;
+    CGFloat height = MAX(toggleHeight, chevronWidth);
+    // The chevron slot is reserved for every switch row, not only expandable
+    // ones, so all switches share one right edge. A row without children keeps
+    // the slot at alpha 0 instead of omitting it.
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0,
-                                                                 chevronWidth + spacing + toggle.bounds.size.width,
+                                                                 chevronWidth + spacing + toggleWidth,
                                                                  height)];
-    UIImageView *chevron = WCAtlasSettingsChevron(expanded ? @"chevron.down" : @"chevron.right", scale);
-    chevron.alpha = toggle.isOn ? 1.0 : 0.3;
-    chevron.frame = CGRectMake(0.0, 0.0, chevronWidth, height);
+    UIImageView *chevron = WCAtlasSettingsChevronView(expanded ? @"chevron.down" : @"chevron.right", scale);
+    chevron.alpha = hasChildren ? (toggle.isOn ? 1.0 : 0.3) : 0.0;
+    chevron.frame = CGRectMake(0.0,
+                               floor((height - chevron.intrinsicContentSize.height) * 0.5),
+                               chevronWidth,
+                               ceil(chevron.intrinsicContentSize.height));
     toggle.frame = CGRectMake(chevronWidth + spacing,
-                              (height - toggle.bounds.size.height) * 0.5,
-                              toggle.bounds.size.width,
-                              toggle.bounds.size.height);
+                              floor((height - toggleHeight) * 0.5),
+                              toggleWidth,
+                              toggleHeight);
     [container addSubview:chevron];
     [container addSubview:toggle];
     return container;
@@ -72,6 +86,7 @@ static UIView *WCAtlasSettingsExpandableSwitchAccessory(UISwitch *toggle, BOOL e
 @interface WCAtlasSettingsCell ()
 @property (nonatomic, strong) WCAtlasSettingItem *settingItem;
 @property (nonatomic, copy) WCAtlasSettingsSwitchHandler switchHandler;
+@property (nonatomic, strong) NSLayoutConstraint *minimumHeightConstraint;
 @end
 
 @implementation WCAtlasSettingsCell
@@ -89,6 +104,20 @@ static UIView *WCAtlasSettingsExpandableSwitchAccessory(UISwitch *toggle, BOOL e
     if (self.switchHandler && self.settingItem) self.switchHandler(self.settingItem, sender.isOn);
 }
 
+- (void)applyMinimumRowHeight:(CGFloat)minimum {
+    if (!self.minimumHeightConstraint) {
+        // Just below required, so a taller content configuration always wins and
+        // this only ever acts as a floor for compact single line rows.
+        NSLayoutConstraint *constraint =
+            [self.contentView.heightAnchor constraintGreaterThanOrEqualToConstant:minimum];
+        constraint.priority = UILayoutPriorityRequired - 1;
+        constraint.active = YES;
+        self.minimumHeightConstraint = constraint;
+        return;
+    }
+    self.minimumHeightConstraint.constant = minimum;
+}
+
 - (void)configureWithItem:(WCAtlasSettingItem *)item
             masterEnabled:(BOOL)masterEnabled
                  expanded:(BOOL)expanded
@@ -96,7 +125,11 @@ static UIView *WCAtlasSettingsExpandableSwitchAccessory(UISwitch *toggle, BOOL e
             switchHandler:(WCAtlasSettingsSwitchHandler)switchHandler {
     self.settingItem = item;
     self.switchHandler = switchHandler;
-    self.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+    // Card colour and corner radius come from WCAtlasCardTableViewController's
+    // willDisplayCell:, which runs after this call and clears the cell's own
+    // background. Staying clear here keeps a single source for the card surface.
+    self.backgroundColor = UIColor.clearColor;
+    self.contentView.backgroundColor = UIColor.clearColor;
     self.selectionStyle = UITableViewCellSelectionStyleDefault;
     self.accessoryView = nil;
     self.accessoryType = UITableViewCellAccessoryNone;
@@ -105,35 +138,41 @@ static UIView *WCAtlasSettingsExpandableSwitchAccessory(UISwitch *toggle, BOOL e
     UIListContentConfiguration *content = [UIListContentConfiguration subtitleCellConfiguration];
     content.text = item.title;
     content.secondaryText = item.subtitle;
-    UIFontMetrics *bodyMetrics = [UIFontMetrics metricsForTextStyle:UIFontTextStyleBody];
-    UIFontMetrics *footnoteMetrics = [UIFontMetrics metricsForTextStyle:UIFontTextStyleFootnote];
-    content.textProperties.font = [bodyMetrics scaledFontForFont:[UIFont systemFontOfSize:17.0 * scale]];
+    content.textProperties.font = WCAtlasSettingsTitleFont(scale);
     content.textProperties.adjustsFontForContentSizeCategory = YES;
     content.textProperties.numberOfLines = 0;
-    content.secondaryTextProperties.font = [footnoteMetrics scaledFontForFont:[UIFont systemFontOfSize:13.0 * scale]];
+    content.secondaryTextProperties.font = WCAtlasSettingsSubtitleFont(scale);
     content.secondaryTextProperties.adjustsFontForContentSizeCategory = YES;
     content.secondaryTextProperties.color = UIColor.secondaryLabelColor;
     content.secondaryTextProperties.numberOfLines = 0;
-    content.image = WCAtlasSettingsSymbol(item.symbol);
-    content.imageProperties.tintColor = UIColor.secondaryLabelColor;
-    content.imageProperties.maximumSize = CGSizeMake(20.0 * scale, 20.0 * scale);
-    CGFloat leading = (item.child ? 28.0 : 12.0) * scale;
-    content.directionalLayoutMargins = NSDirectionalEdgeInsetsMake(6.0 * scale, leading, 6.0 * scale, 12.0 * scale);
+    content.image = WCAtlasSettingsIconImage(item.symbol, scale);
+    content.imageProperties.tintColor = WCAtlasSettingsIconTintColor();
+    CGSize iconColumn = CGSizeMake(WCAtlasSettingsScale(WCAtlasSettingsIconColumnWidth, scale),
+                                   WCAtlasSettingsScale(WCAtlasSettingsIconColumnWidth, scale));
+    content.imageProperties.maximumSize = iconColumn;
+    WCAtlasSettingsApplyIconTitleSpacing(content, WCAtlasSettingsScale(WCAtlasSettingsIconTitleSpacing, scale));
+    CGFloat leading = WCAtlasSettingsScale(item.child ? WCAtlasSettingsRowInsetH + WCAtlasSettingsChildIndent
+                                                      : WCAtlasSettingsRowInsetH, scale);
+    CGFloat vertical = WCAtlasSettingsScale(WCAtlasSettingsRowVerticalPadding, scale);
+    CGFloat trailing = WCAtlasSettingsScale(WCAtlasSettingsAccessoryTrailing, scale);
+    content.directionalLayoutMargins = NSDirectionalEdgeInsetsMake(vertical, leading, vertical, trailing);
     self.contentConfiguration = content;
+    [self applyMinimumRowHeight:WCAtlasSettingsScale(WCAtlasSettingsRowMinHeight, scale)];
 
     if (item.kind == WCAtlasSettingRowKindSwitch) {
         UISwitch *toggle = [UISwitch new];
-        toggle.onTintColor = UIColor.systemBlueColor;
+        toggle.onTintColor = WCAtlasSettingsAccentColor();
         toggle.on = [NSUserDefaults.standardUserDefaults boolForKey:item.defaultsKey];
         toggle.enabled = [item.defaultsKey isEqualToString:WCAtlasEnabledKey] || masterEnabled;
         toggle.accessibilityLabel = item.title;
         [toggle addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
+        // Both branches reserve the same chevron slot, so switches of expandable
+        // and plain rows share one right edge.
+        self.accessoryView = WCAtlasSettingsSwitchAccessory(toggle, expanded, item.hasChildren, scale);
         if (item.hasChildren) {
-            self.accessoryView = WCAtlasSettingsExpandableSwitchAccessory(toggle, expanded, scale);
             self.selectionStyle = toggle.isOn ? UITableViewCellSelectionStyleDefault : UITableViewCellSelectionStyleNone;
             self.accessibilityHint = toggle.isOn ? (expanded ? @"轻点收起子选项" : @"轻点展开子选项") : nil;
         } else {
-            self.accessoryView = toggle;
             self.selectionStyle = UITableViewCellSelectionStyleNone;
         }
     } else if (item.kind == WCAtlasSettingRowKindDetail) {
@@ -141,9 +180,13 @@ static UIView *WCAtlasSettingsExpandableSwitchAccessory(UISwitch *toggle, BOOL e
     } else if (item.value.length > 0) {
         UILabel *value = [UILabel new];
         value.text = item.value;
-        value.font = [[UIFontMetrics metricsForTextStyle:UIFontTextStyleSubheadline] scaledFontForFont:[UIFont systemFontOfSize:15.0 * scale]];
+        value.font = WCAtlasSettingsValueFont(scale);
         value.adjustsFontForContentSizeCategory = YES;
-        value.textColor = UIColor.secondaryLabelColor;
+        value.textColor = WCAtlasSettingsValueColor();
+        value.textAlignment = NSTextAlignmentRight;
+        value.lineBreakMode = NSLineBreakByTruncatingTail;
+        // A bare label as the accessory view right-aligns to the same trailing
+        // inset as every other accessory.
         self.accessoryView = value;
         self.selectionStyle = UITableViewCellSelectionStyleNone;
     }
@@ -163,8 +206,12 @@ static UIView *WCAtlasSettingsExpandableSwitchAccessory(UISwitch *toggle, BOOL e
 @property (nonatomic, strong) UIView *searchCapsuleView;
 @property (nonatomic, weak) UISearchBar *embeddedSearchBar;
 @property (nonatomic, copy) NSArray<NSLayoutConstraint *> *searchBarConstraints;
-@property (nonatomic, strong) NSLayoutConstraint *capsuleBottomConstraint;
-@property (nonatomic, copy) NSArray<NSLayoutConstraint *> *avatarConstraints;
+// The card is laid out with stack views so its height comes from its content
+// instead of the two magic totals (104 / 154) the previous version returned.
+@property (nonatomic, strong) UIStackView *contentStack;
+@property (nonatomic, strong) UIStackView *profileRow;
+@property (nonatomic, strong) UIStackView *textStack;
+@property (nonatomic, strong) UIView *avatarContentView;
 @property (nonatomic, copy) NSString *appliedAvatarWXID;
 @property (nonatomic, copy) NSString *appliedHeadURL;
 - (void)applyProfileWithWXID:(nullable NSString *)wxid
@@ -233,7 +280,7 @@ static void WCAtlasHideSearchBarBackground(UIView *view) {
     _capsuleView = [UIView new];
     _capsuleView.translatesAutoresizingMaskIntoConstraints = NO;
     _capsuleView.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-    _capsuleView.layer.cornerRadius = 20.0;
+    _capsuleView.layer.cornerRadius = WCAtlasSettingsCornerRadius;
     _capsuleView.layer.cornerCurve = kCACornerCurveContinuous;
     _capsuleView.userInteractionEnabled = YES;
     [self addSubview:_capsuleView];
@@ -244,19 +291,16 @@ static void WCAtlasHideSearchBarBackground(UIView *view) {
     [_capsuleView addGestureRecognizer:_profileTapGesture];
 
     _nicknameLabel = [UILabel new];
-    _nicknameLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    _nicknameLabel.font = [[UIFontMetrics metricsForTextStyle:UIFontTextStyleTitle2]
-        scaledFontForFont:[UIFont systemFontOfSize:18.0 weight:UIFontWeightSemibold]];
+    _nicknameLabel.font = WCAtlasSettingsProfileNameFont(1.0);
     _nicknameLabel.adjustsFontForContentSizeCategory = YES;
     _nicknameLabel.numberOfLines = 1;
     _nicknameLabel.textAlignment = NSTextAlignmentLeft;
     _nicknameLabel.lineBreakMode = NSLineBreakByTruncatingTail;
 
     _badgeLabel = [WCAtlasIdentityBadgeLabel new];
-    _badgeLabel.font = [[UIFontMetrics metricsForTextStyle:UIFontTextStyleCaption1]
-        scaledFontForFont:[UIFont systemFontOfSize:11.0 weight:UIFontWeightSemibold]];
+    _badgeLabel.font = WCAtlasSettingsBadgeFont(1.0);
     _badgeLabel.adjustsFontForContentSizeCategory = YES;
-    _badgeLabel.layer.cornerRadius = 6.0;
+    _badgeLabel.layer.cornerRadius = WCAtlasSettingsBadgeCornerRadius;
     _badgeLabel.layer.cornerCurve = kCACornerCurveContinuous;
     _badgeLabel.layer.masksToBounds = YES;
     _badgeLabel.hidden = YES;
@@ -267,28 +311,58 @@ static void WCAtlasHideSearchBarBackground(UIView *view) {
                                                  forAxis:UILayoutConstraintAxisHorizontal];
 
     _identityRow = [[UIStackView alloc] initWithArrangedSubviews:@[_nicknameLabel, _badgeLabel]];
-    _identityRow.translatesAutoresizingMaskIntoConstraints = NO;
     _identityRow.axis = UILayoutConstraintAxisHorizontal;
     _identityRow.alignment = UIStackViewAlignmentCenter;
-    _identityRow.spacing = 8.0;
-    [_capsuleView addSubview:_identityRow];
+    _identityRow.spacing = WCAtlasSettingsAccessorySpacing;
 
     _wxidLabel = [UILabel new];
-    _wxidLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    _wxidLabel.font = [[UIFontMetrics metricsForTextStyle:UIFontTextStyleBody]
-        scaledFontForFont:[UIFont systemFontOfSize:13.0 weight:UIFontWeightRegular]];
+    _wxidLabel.font = WCAtlasSettingsProfileIdentityFont(1.0);
     _wxidLabel.adjustsFontForContentSizeCategory = YES;
     _wxidLabel.textColor = UIColor.secondaryLabelColor;
     _wxidLabel.textAlignment = NSTextAlignmentLeft;
     _wxidLabel.lineBreakMode = NSLineBreakByTruncatingMiddle;
-    [_capsuleView addSubview:_wxidLabel];
 
-    _capsuleBottomConstraint = [_capsuleView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-12.0];
+    // The avatar container exists from the start, so the row never has to be
+    // rebuilt when account values arrive; only its content image is swapped.
+    _avatarView = [UIView new];
+    _avatarView.translatesAutoresizingMaskIntoConstraints = NO;
+    _avatarView.clipsToBounds = YES;
+    _avatarView.layer.cornerRadius = WCAtlasSettingsAvatarCornerRadius;
+    _avatarView.layer.cornerCurve = kCACornerCurveContinuous;
+    [_avatarView.widthAnchor constraintEqualToConstant:WCAtlasSettingsAvatarSize].active = YES;
+    [_avatarView.heightAnchor constraintEqualToConstant:WCAtlasSettingsAvatarSize].active = YES;
+
+    _textStack = [[UIStackView alloc] initWithArrangedSubviews:@[_identityRow, _wxidLabel]];
+    _textStack.translatesAutoresizingMaskIntoConstraints = NO;
+    _textStack.axis = UILayoutConstraintAxisVertical;
+    // Fill rather than leading: the identity line stretches to the column width
+    // and truncates, instead of its intrinsic width pushing the card wider.
+    _textStack.alignment = UIStackViewAlignmentFill;
+    _textStack.spacing = WCAtlasSettingsProfileTextSpacing;
+
+    _profileRow = [[UIStackView alloc] initWithArrangedSubviews:@[_avatarView, _textStack]];
+    _profileRow.axis = UILayoutConstraintAxisHorizontal;
+    _profileRow.alignment = UIStackViewAlignmentCenter;
+    _profileRow.spacing = WCAtlasSettingsProfileRowSpacing;
+
+    _contentStack = [[UIStackView alloc] initWithArrangedSubviews:@[_profileRow]];
+    _contentStack.translatesAutoresizingMaskIntoConstraints = NO;
+    _contentStack.axis = UILayoutConstraintAxisVertical;
+    _contentStack.alignment = UIStackViewAlignmentFill;
+    _contentStack.spacing = WCAtlasSettingsProfileSearchSpacing;
+    [_capsuleView addSubview:_contentStack];
+
+    CGFloat inset = WCAtlasSettingsCardInsetH;
+    CGFloat margin = WCAtlasSettingsCardVerticalMargin;
     [NSLayoutConstraint activateConstraints:@[
-        [_capsuleView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16.0],
-        [_capsuleView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16.0],
-        [_capsuleView.topAnchor constraintEqualToAnchor:self.topAnchor constant:12.0],
-        _capsuleBottomConstraint,
+        [_capsuleView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:inset],
+        [_capsuleView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-inset],
+        [_capsuleView.topAnchor constraintEqualToAnchor:self.topAnchor constant:margin],
+        [_capsuleView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-margin],
+        [_contentStack.leadingAnchor constraintEqualToAnchor:_capsuleView.leadingAnchor constant:inset],
+        [_contentStack.trailingAnchor constraintEqualToAnchor:_capsuleView.trailingAnchor constant:-inset],
+        [_contentStack.topAnchor constraintEqualToAnchor:_capsuleView.topAnchor constant:inset],
+        [_contentStack.bottomAnchor constraintEqualToAnchor:_capsuleView.bottomAnchor constant:-inset],
     ]];
 
     // Account values are persisted. Apply them before the header first appears
@@ -315,25 +389,22 @@ static void WCAtlasHideSearchBarBackground(UIView *view) {
         textField.layer.backgroundColor = UIColor.clearColor.CGColor;
     }
 
-    [self.capsuleBottomConstraint setActive:NO];
     if (!self.searchCapsuleView) {
+        // The search field lives inside the profile card, so the card simply
+        // grows by one arranged subview instead of a second card being
+        // positioned underneath it with a hard coded height.
         self.searchCapsuleView = [UIView new];
-        self.searchCapsuleView.translatesAutoresizingMaskIntoConstraints = NO;
         self.searchCapsuleView.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
-        self.searchCapsuleView.layer.cornerRadius = 17.0;
+        self.searchCapsuleView.layer.cornerRadius = WCAtlasSettingsInnerCornerRadius;
         self.searchCapsuleView.layer.cornerCurve = kCACornerCurveContinuous;
         self.searchCapsuleView.layer.masksToBounds = YES;
-        [self addSubview:self.searchCapsuleView];
+        [self.searchCapsuleView.heightAnchor
+            constraintEqualToConstant:WCAtlasSettingsSearchFieldHeight].active = YES;
+        [self.contentStack addArrangedSubview:self.searchCapsuleView];
+        self.contentStack.spacing = WCAtlasSettingsProfileSearchSpacing;
     }
     [self.searchCapsuleView addSubview:searchBar];
     self.searchBarConstraints = @[
-        [self.capsuleView.heightAnchor constraintEqualToConstant:80.0],
-        [self.searchCapsuleView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16.0],
-        [self.searchCapsuleView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16.0],
-        [self.searchCapsuleView.topAnchor constraintEqualToAnchor:self.capsuleView.bottomAnchor constant:12.0],
-        [self.searchCapsuleView.heightAnchor constraintEqualToConstant:46.0],
-        [self.searchCapsuleView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-4.0],
-        [searchBar.centerXAnchor constraintEqualToAnchor:self.searchCapsuleView.centerXAnchor],
         [searchBar.leadingAnchor constraintEqualToAnchor:self.searchCapsuleView.leadingAnchor constant:8.0],
         [searchBar.trailingAnchor constraintEqualToAnchor:self.searchCapsuleView.trailingAnchor constant:-8.0],
         [searchBar.topAnchor constraintEqualToAnchor:self.searchCapsuleView.topAnchor constant:2.0],
@@ -416,44 +487,28 @@ static void WCAtlasHideSearchBarBackground(UIView *view) {
         : [NSString stringWithFormat:@"%@，%@", displayNickname, self.wxidLabel.text];
     self.accessibilityHint = self.wxid.length > 0 ? @"轻点复制 wxid" : nil;
 
-    BOOL avatarNeedsUpdate = !self.avatarView ||
+    BOOL avatarNeedsUpdate = !self.avatarContentView ||
         ![(self.appliedAvatarWXID ?: @"") isEqualToString:(self.wxid ?: @"")] ||
         ![(self.appliedHeadURL ?: @"") isEqualToString:(headURL ?: @"")];
     if (!avatarNeedsUpdate) return;
     self.appliedAvatarWXID = self.wxid ?: @"";
     self.appliedHeadURL = headURL ?: @"";
-    [NSLayoutConstraint deactivateConstraints:self.avatarConstraints ?: @[]];
-    [self.avatarView removeFromSuperview];
+    // Only the image inside the fixed container is replaced. The container's
+    // size and position come from the stack view, so no constraints are rebuilt.
+    [self.avatarContentView removeFromSuperview];
     UIView *avatarContent = [self makeAvatarViewWithWXID:self.wxid headURL:headURL];
     avatarContent.translatesAutoresizingMaskIntoConstraints = NO;
     avatarContent.clipsToBounds = YES;
-    avatarContent.layer.cornerRadius = 16.0;
+    avatarContent.layer.cornerRadius = WCAtlasSettingsAvatarCornerRadius;
     avatarContent.layer.cornerCurve = kCACornerCurveContinuous;
-
-    self.avatarView = [UIView new];
-    self.avatarView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.avatarView.clipsToBounds = YES;
-    self.avatarView.layer.cornerRadius = 16.0;
-    self.avatarView.layer.cornerCurve = kCACornerCurveContinuous;
     [self.avatarView addSubview:avatarContent];
-    [self.capsuleView addSubview:self.avatarView];
-    self.avatarConstraints = @[
-        [self.avatarView.leadingAnchor constraintEqualToAnchor:self.capsuleView.leadingAnchor constant:16.0],
-        [self.avatarView.topAnchor constraintEqualToAnchor:self.capsuleView.topAnchor constant:14.0],
-        [self.avatarView.widthAnchor constraintEqualToConstant:64.0],
-        [self.avatarView.heightAnchor constraintEqualToConstant:64.0],
+    [NSLayoutConstraint activateConstraints:@[
         [avatarContent.leadingAnchor constraintEqualToAnchor:self.avatarView.leadingAnchor],
         [avatarContent.trailingAnchor constraintEqualToAnchor:self.avatarView.trailingAnchor],
         [avatarContent.topAnchor constraintEqualToAnchor:self.avatarView.topAnchor],
         [avatarContent.bottomAnchor constraintEqualToAnchor:self.avatarView.bottomAnchor],
-        [self.identityRow.leadingAnchor constraintEqualToAnchor:self.avatarView.trailingAnchor constant:14.0],
-        [self.identityRow.trailingAnchor constraintLessThanOrEqualToAnchor:self.capsuleView.trailingAnchor constant:-16.0],
-        [self.identityRow.bottomAnchor constraintEqualToAnchor:self.capsuleView.centerYAnchor constant:-2.0],
-        [self.wxidLabel.leadingAnchor constraintEqualToAnchor:self.identityRow.leadingAnchor],
-        [self.wxidLabel.trailingAnchor constraintEqualToAnchor:self.capsuleView.trailingAnchor constant:-16.0],
-        [self.wxidLabel.topAnchor constraintEqualToAnchor:self.identityRow.bottomAnchor constant:4.0],
-    ];
-    [NSLayoutConstraint activateConstraints:self.avatarConstraints];
+    ]];
+    self.avatarContentView = avatarContent;
 }
 
 - (void)applyIdentityBadge:(WCAtlasIdentityBadge *)badge {
@@ -492,16 +547,23 @@ static void WCAtlasHideSearchBarBackground(UIView *view) {
     if (gestureRecognizer != self.profileTapGesture) return YES;
     UIView *view = touch.view;
     while (view && view != self.capsuleView) {
-        if (view == self.badgeLabel || view == self.embeddedSearchBar) return NO;
+        // The badge and the search field now live inside the card, so their whole
+        // subtree has to be excluded and not just the top level view.
+        if (view == self.badgeLabel || view == self.searchCapsuleView) return NO;
         view = view.superview;
     }
     return YES;
 }
 
 - (CGFloat)preferredHeightForWidth:(CGFloat)width scale:(CGFloat)scale {
-    (void)width;
     (void)scale;
-    return self.embeddedSearchBar ? 154.0 : 104.0;
+    if (width <= 0.0) return 0.0;
+    // Measure the card from its own constraints instead of returning one of two
+    // hard coded totals, so a larger Dynamic Type size widens the card by itself.
+    CGSize fitted = [self systemLayoutSizeFittingSize:CGSizeMake(width, UILayoutFittingCompressedSize.height)
+                        withHorizontalFittingPriority:UILayoutPriorityRequired
+                              verticalFittingPriority:UILayoutPriorityFittingSizeLevel];
+    return ceil(fitted.height);
 }
 
 - (void)showCopyConfirmation {
