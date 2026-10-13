@@ -100,12 +100,29 @@ static BOOL WCAtlasVirtualLocationCaptureCoordinateFromPicker(id picker) {
             WCAtlasVirtualLocationTrace(@"[VL] picker has no %@", name);
             continue;
         }
-        id value = ((id (*)(id, SEL))objc_msgSend)(picker, selector);
+        // Read the return type before calling anything. An accessor that hands back a
+        // coordinate structure and one that hands back an object both turn up here, and
+        // sending an object message to a structure would be the same class of mistake
+        // that has already cost this path one crash. The encoding says which it is, and
+        // the class name reaches the trace so the next report is conclusive.
+        Method method = class_getInstanceMethod(object_getClass(picker), selector);
+        const char *encoding = method ? method_getTypeEncoding(method) : NULL;
         CLLocationCoordinate2D coordinate = kCLLocationCoordinate2DInvalid;
-        if (value && WCAtlasVirtualLocationCoordinateFromObject(value, &coordinate)) {
-            WCAtlasVirtualLocationSetCoordinate(coordinate, nil);
-            return YES;
+        if (encoding && encoding[0] == '{') {
+            coordinate = ((WCAtlasVirtualLocationCoordinateMessage)objc_msgSend)(picker, selector);
+            WCAtlasVirtualLocationTrace(@"[VL] %@ returned a structure", name);
+        } else if (encoding && encoding[0] == '@') {
+            id value = ((id (*)(id, SEL))objc_msgSend)(picker, selector);
+            WCAtlasVirtualLocationTrace(@"[VL] %@ returned %@", name,
+                                        value ? NSStringFromClass([value class]) : @"nil");
+            if (!value || !WCAtlasVirtualLocationCoordinateFromObject(value, &coordinate)) continue;
+        } else {
+            WCAtlasVirtualLocationTrace(@"[VL] %@ has an unreadable return type", name);
+            continue;
         }
+        if (!WCAtlasVirtualLocationCoordinateIsValid(coordinate)) continue;
+        WCAtlasVirtualLocationSetCoordinate(coordinate, nil);
+        return YES;
     }
     return NO;
 }
