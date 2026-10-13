@@ -1,4 +1,5 @@
 #import "WCAtlasChatTTS.h"
+#import "WCAtlasSettingsTheme.h"
 #import "WCAtlasPrivateAPI.h"
 #import "WCAtlasSilkEncoder.h"
 #import "WCAtlasTTSGenerator.h"
@@ -477,7 +478,7 @@ static void __attribute__((unused)) WCAtlasChatTTSPresentTextInput(UIViewControl
     UIBlurEffect *blur = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemChromeMaterial];
     UIVisualEffectView *card = [[UIVisualEffectView alloc] initWithEffect:blur];
     card.translatesAutoresizingMaskIntoConstraints = NO;
-    card.layer.cornerRadius = 20;
+    card.layer.cornerRadius = WCAtlasSettingsCornerRadius;
     card.layer.cornerCurve = kCACornerCurveContinuous;
     card.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
     card.clipsToBounds = YES;
@@ -501,13 +502,13 @@ static void __attribute__((unused)) WCAtlasChatTTSPresentTextInput(UIViewControl
     table.translatesAutoresizingMaskIntoConstraints = NO;
     table.dataSource = self;
     table.delegate = self;
-    table.rowHeight = 46;
+    WCAtlasSettingsApplyRowMetrics(table, 1.0);
     table.tableFooterView = [UIView new];
     table.backgroundColor = UIColor.clearColor;
     table.separatorColor = [UIColor.separatorColor colorWithAlphaComponent:0.28];
     [cardContent addSubview:table];
 
-    CGFloat height = MIN(470.0, 58.0 + MAX(1, self.items.count) * 46.0);
+    CGFloat height = MIN(470.0, 58.0 + MAX(1, self.items.count) * WCAtlasSettingsRowMinHeight);
     [NSLayoutConstraint activateConstraints:@[
         [card.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [card.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
@@ -545,6 +546,7 @@ static void __attribute__((unused)) WCAtlasChatTTSPresentTextInput(UIViewControl
         ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
     cell.tintColor = self.destructive ? UIColor.systemRedColor : UIColor.systemBlueColor;
     cell.backgroundColor = UIColor.clearColor;
+    WCAtlasSettingsApplyMinimumRowHeight(cell, 1.0);
     return cell;
 }
 
