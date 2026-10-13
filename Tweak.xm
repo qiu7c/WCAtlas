@@ -30,6 +30,8 @@ extern "C" void MSHookMessageEx(Class _class, SEL message, IMP hook, IMP *old);
 #import "Sources/WCAtlasEnhancements.h"
 #import "Sources/WCAtlasPluginManager.h"
 #import "Sources/WCAtlasPrivateAPI.h"
+#import "Sources/WCAtlasVirtualLocation.h"
+#import "Sources/WCAtlasNavigationAppearance.h"
 #import "Sources/WCAtlasCallAudio.h"
 #import "Sources/WCAtlasRuntimeFeatures.h"
 #import "Sources/WCAtlasInterfaceTweaks.h"
@@ -14173,6 +14175,8 @@ static void WCAtlasInstallExclusiveRedEnvelopeHooks(void) {
     WCAtlasInstallChatTTSSendEntryHooks();
     WCAtlasInstallAutoSpeakerphoneHook();
     WCAtlasInstallExclusiveRedEnvelopeHooks();
+    WCAtlasVirtualLocationInstallHooks();
+    WCAtlasNavigationAppearanceInstallHooks();
     if ([CADisplayLink instancesRespondToSelector:@selector(setPreferredFrameRateRange:)]) {
         %init(WCAtlasHighRefreshRateRange);
     }

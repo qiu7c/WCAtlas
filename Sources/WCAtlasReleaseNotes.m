@@ -45,12 +45,16 @@ NSArray<WCAtlasReleaseNote *> *WCAtlasReleaseNotes(void) {
     dispatch_once(&onceToken, ^{
         notes = @[
             [WCAtlasReleaseNote noteWithVersion:@"1.0.1"
-                                     headline:@"滑动返回修复"
+                                     headline:@"虚拟定位与返回键"
                                         items:@[
+                [WCAtlasReleaseNoteItem itemWithTitle:@"虚拟定位"
+                                               detail:@"可在地图上选点或手动输入经纬度，在聊天发送位置、实时共享位置与朋友圈生效；朋友圈有独立开关，并支持收藏常用坐标与 0.001° 微调。"],
+                [WCAtlasReleaseNoteItem itemWithTitle:@"返回键样式"
+                                               detail:@"WCAtlas 自己的页面左上角改为纯黑箭头，不再显示上一页标题；可在「界面优化 - 返回按钮」关闭。"],
                 [WCAtlasReleaseNoteItem itemWithTitle:@"首页会话归类"
                                                detail:@"从首页的分类入口进入后，可从屏幕左边缘滑动返回上一级，不再只能点按导航栏的返回按钮。"],
                 [WCAtlasReleaseNoteItem itemWithTitle:@"稳定性"
-                                               detail:@"本次为修复版本，1.0.0 的增强功能与设置保持不变。"],
+                                               detail:@"同时修复若干细节问题，1.0.0 已提供的增强功能与设置保持不变。"],
             ]],
             [WCAtlasReleaseNote noteWithVersion:@"1.0.0"
                                      headline:@"首个正式版本"

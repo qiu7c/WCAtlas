@@ -1,4 +1,5 @@
 #import "WCAtlasHomeCategories.h"
+#import "WCAtlasNavigationAppearance.h"
 #import "WCAtlasEnhancements.h"
 #import "WCAtlasPrivateAPI.h"
 #import "WCAtlasSendConfirmation.h"
@@ -709,6 +710,8 @@ UISwipeActionsConfiguration *WCAtlasHomeCategoriesLeadingSwipeActions(id control
     if (@available(iOS 15.0, *)) {
         self.navigationItem.compactScrollEdgeAppearance = appearance;
     }
+    // This browser owns its navigation stack, so the bar is ours to style.
+    WCAtlasApplyBackButtonStyle(self.navigationController.navigationBar, self.navigationItem);
 }
 
 - (void)closeCategoryBrowser {

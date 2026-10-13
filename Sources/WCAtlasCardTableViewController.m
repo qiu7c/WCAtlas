@@ -1,5 +1,6 @@
 #import "WCAtlasCardTableViewController.h"
 #import "WCAtlasSettingsTheme.h"
+#import "WCAtlasNavigationAppearance.h"
 
 #import <QuartzCore/QuartzCore.h>
 
@@ -17,6 +18,20 @@
     // Every page on this base gets the same row rhythm, which is why a page no
     // longer needs to state a row height of its own.
     WCAtlasSettingsApplyRowMetrics(self.tableView, 1.0);
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    // Every page on this base shows only our black chevron, never the blue
+    // system back title of the page it was pushed from.
+    WCAtlasApplyBackButtonStyle(self.navigationController.navigationBar, self.navigationItem);
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    // The bar can belong to WeChat, so hand the system chevron back on the way
+    // out rather than leaving ours behind for its own pages.
+    WCAtlasRestoreBackButtonStyle(self.navigationController.navigationBar);
 }
 
 - (void)tableView:(UITableView *)tableView

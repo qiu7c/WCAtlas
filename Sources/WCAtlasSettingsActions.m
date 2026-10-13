@@ -23,6 +23,9 @@
 #import "WCAtlasCallAudio.h"
 #import "WCAtlasAutomationViewController.h"
 #import "WCAtlasHomeCategories.h"
+#import "WCAtlasVirtualLocation.h"
+#import "WCAtlasVirtualLocationEditorViewController.h"
+#import "WCAtlasVirtualLocationPicker.h"
 #import <math.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
@@ -662,6 +665,30 @@ static char WCAtlasContactSearchLogicKey;
 - (void)performActionForItem:(WCAtlasSettingItem *)item {
     switch (item.action) {
         case WCAtlasSettingActionConfigManager: [self push:[WCAtlasConfigManagerViewController new]]; break;
+        case WCAtlasSettingActionVirtualLocationManual: {
+            __weak typeof(self) weakSelf = self;
+            WCAtlasVirtualLocationEditorViewController *editor = [WCAtlasVirtualLocationEditorViewController new];
+            editor.onChange = ^{ [weakSelf reload]; };
+            [self push:editor];
+            break;
+        }
+        case WCAtlasSettingActionVirtualLocationPick: {
+            __weak typeof(self) weakSelf = self;
+            // WeChat's own picker first; the manual editor is what remains when the
+            // installed WeChat no longer has one.
+            if (!WCAtlasVirtualLocationPresentWeChatPicker(self.viewController, ^{ [weakSelf reload]; })) {
+                WCAtlasVirtualLocationSetPickerNotice(@"当前微信版本无法打开定位选择页，已转到手动输入。");
+                WCAtlasVirtualLocationEditorViewController *editor = [WCAtlasVirtualLocationEditorViewController new];
+                editor.onChange = ^{ [weakSelf reload]; };
+                [self push:editor];
+            }
+            break;
+        }
+        case WCAtlasSettingActionVirtualLocationClear: {
+            WCAtlasVirtualLocationClear();
+            [self reload];
+            break;
+        }
         case WCAtlasSettingActionOfficialTelegram: [self openOfficialTelegram]; break;
         case WCAtlasSettingActionFindFriend: [self presentFindFriend]; break;
         case WCAtlasSettingActionOpenChatByID: [self presentOpenChatByID]; break;

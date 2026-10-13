@@ -5,6 +5,7 @@
 #import "WCAtlasSettingsModels.h"
 #import "WCAtlasSettingsUI.h"
 #import "WCAtlasSettingsTheme.h"
+#import "WCAtlasNavigationAppearance.h"
 #import "WCAtlasAntiRevoke.h"
 #import "WCAtlasEnhancements.h"
 #import "WCAtlasInterfaceTweaks.h"
@@ -95,6 +96,14 @@
         [appearance configureWithOpaqueBackground];
         appearance.backgroundColor = UIColor.systemGroupedBackgroundColor;
         appearance.shadowColor = UIColor.clearColor;
+        // The page below this one belongs to WeChat, so its title can arrive in
+        // our bar: keep it black instead of the system blue. This mutates the
+        // appearance built here rather than adding a second one, so the white
+        // background above stays the only source.
+        appearance.backButtonAppearance.normal.titleTextAttributes =
+            @{ NSForegroundColorAttributeName: WCAtlasBackChevronColor() };
+        appearance.backButtonAppearance.highlighted.titleTextAttributes =
+            @{ NSForegroundColorAttributeName: WCAtlasBackChevronColor() };
         self.navigationItem.standardAppearance = appearance;
         self.navigationItem.scrollEdgeAppearance = appearance;
         self.navigationItem.compactAppearance = appearance;
@@ -459,6 +468,7 @@
         case WCAtlasSettingActionOpenEnhancements: [self openCategory:WCAtlasSettingsCategoryEnhancements]; break;
         case WCAtlasSettingActionOpenInterface: [self openCategory:WCAtlasSettingsCategoryInterface]; break;
         case WCAtlasSettingActionOpenPlugin: [self openCategory:WCAtlasSettingsCategoryPlugin]; break;
+        case WCAtlasSettingActionOpenVirtualLocation: [self openCategory:WCAtlasSettingsCategoryVirtualLocation]; break;
         default: [self.actions performActionForItem:item]; break;
     }
 }

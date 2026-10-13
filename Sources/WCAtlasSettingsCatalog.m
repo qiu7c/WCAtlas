@@ -14,6 +14,8 @@
 #import "WCAtlasMentionHighlight.h"
 #import "WCAtlasHomeCategories.h"
 #import "WCAtlasChatTTS.h"
+#import "WCAtlasVirtualLocation.h"
+#import "WCAtlasNavigationAppearance.h"
 #import <stdlib.h>
 
 NSString *const WCAtlasEnabledKey = @"com.qiu7c.wcatlas.enabled";
@@ -309,6 +311,7 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasRootSections(void) {
             WCAtlasItem(@"界面禁用", @"隐藏不需要的界面元素和广告", @"eye.slash", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenInterfaceDisabled),
             WCAtlasItem(@"界面优化", @"头像、胶囊、缩放与输入栏样式", @"paintbrush", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenInterface),
             WCAtlasItem(@"常用增强", @"自动化、扫码、资料和本地显示", @"bolt", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenEnhancements),
+            WCAtlasItem(@"虚拟定位", @"发送位置、实时共享与朋友圈定位", @"location.fill", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenVirtualLocation),
             WCAtlasItem(@"插件设置", @"通知样式、日志、配置与插件入口", @"gearshape.2", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenPlugin),
         ]],
         [WCAtlasSettingSection sectionWithIdentifier:@"about" title:@"关于"
@@ -747,6 +750,11 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasInterfaceSections(NSUserDefaults
     }
     return @[
         [WCAtlasSettingSection sectionWithIdentifier:@"display" title:@"显示" footer:@"关闭后恢复微信原始样式。" items:display],
+        [WCAtlasSettingSection sectionWithIdentifier:@"navigation" title:@"返回按钮"
+                                             footer:@"只作用于 WCAtlas 自己的页面，微信原始页面不受影响。"
+                                              items:@[
+            WCAtlasItem(@"纯黑返回箭头", @"隐藏返回按钮旁的前一页标题", @"arrow.left", WCAtlasSettingRowKindSwitch, WCAtlasBlackBackItemKey, nil, WCAtlasSettingActionNone),
+        ]],
         [WCAtlasSettingSection sectionWithIdentifier:@"chat-capsules" title:@"聊天顶栏" footer:@"左右顶栏使用所选玻璃样式；置顶消息固定使用磨砂玻璃并跟随模糊强度，避免展开时背景溢出。" items:chatCapsules],
         [WCAtlasSettingSection sectionWithIdentifier:@"input" title:@"输入栏" footer:nil items:input],
     ];
@@ -783,6 +791,30 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasPluginSections(NSUserDefaults *d
     ];
 }
 
+static NSArray<WCAtlasSettingSection *> *WCAtlasVirtualLocationSections(void) {
+    BOOL hasSelection = WCAtlasVirtualLocationHasSelection();
+    return @[
+        [WCAtlasSettingSection sectionWithIdentifier:@"virtual-location-switch" title:@"定位"
+                                             footer:@"开启后在微信内使用你选定的坐标，关闭会立即恢复真实定位。"
+                                              items:@[
+            WCAtlasItem(@"启用虚拟定位", @"聊天发送位置与实时共享位置", @"location.fill", WCAtlasSettingRowKindSwitch, WCAtlasVirtualLocationEnabledKey, nil, WCAtlasSettingActionNone),
+            WCAtlasItem(@"朋友圈虚拟定位", @"关闭时朋友圈保持真实定位", @"photo.on.rectangle.angled", WCAtlasSettingRowKindSwitch, WCAtlasVirtualLocationMomentsEnabledKey, nil, WCAtlasSettingActionNone),
+        ]],
+        [WCAtlasSettingSection sectionWithIdentifier:@"virtual-location-current" title:@"当前选定"
+                                             footer:nil
+                                              items:@[
+            WCAtlasItem(@"当前坐标", hasSelection ? @"已选定" : @"未选择", @"mappin.and.ellipse", WCAtlasSettingRowKindInfo, nil, hasSelection ? WCAtlasVirtualLocationCoordinateText() : @"未选择", WCAtlasSettingActionNone),
+        ]],
+        [WCAtlasSettingSection sectionWithIdentifier:@"virtual-location-actions" title:@"选择方式"
+                                             footer:@"优先打开微信自带的地图选点页；打不开时会自动转到手动输入。"
+                                              items:@[
+            WCAtlasItem(@"选择定位", @"在微信地图上选点", @"map", WCAtlasSettingRowKindDetail, nil, @"打开", WCAtlasSettingActionVirtualLocationPick),
+            WCAtlasItem(@"手动输入经纬度", @"可收藏常用坐标并微调", @"square.and.pencil", WCAtlasSettingRowKindDetail, nil, hasSelection ? WCAtlasVirtualLocationCoordinateText() : @"输入", WCAtlasSettingActionVirtualLocationManual),
+            WCAtlasItem(@"清除定位", hasSelection ? @"回到真实定位" : @"当前没有设置", @"trash", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionVirtualLocationClear),
+        ]],
+    ];
+}
+
 NSArray<WCAtlasSettingSection *> *WCAtlasSettingsBuildSections(WCAtlasSettingsCategory category,
                                                            NSSet<NSString *> *collapsedFeatureKeys) {
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
@@ -794,6 +826,7 @@ NSArray<WCAtlasSettingSection *> *WCAtlasSettingsBuildSections(WCAtlasSettingsCa
         case WCAtlasSettingsCategoryEnhancements: return WCAtlasEnhancementSections(defaults, collapsed, NO);
         case WCAtlasSettingsCategoryInterface: return WCAtlasInterfaceSections(defaults, collapsed, NO);
         case WCAtlasSettingsCategoryPlugin: return WCAtlasPluginSections(defaults);
+        case WCAtlasSettingsCategoryVirtualLocation: return WCAtlasVirtualLocationSections();
         case WCAtlasSettingsCategoryRoot:
         default: return WCAtlasRootSections();
     }
