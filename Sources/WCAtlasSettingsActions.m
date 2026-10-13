@@ -694,9 +694,9 @@ static char WCAtlasContactSearchLogicKey;
             NSUInteger index = (NSUInteger)item.defaultsKey.integerValue;
             if (index < presets.count) {
                 NSDictionary<NSString *, id> *preset = presets[index];
-                CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake([preset[WCAtlasVirtualLocationLatitudeKey] doubleValue],
-                                                                              [preset[WCAtlasVirtualLocationLongitudeKey] doubleValue]);
-                NSString *presetName = preset[WCAtlasVirtualLocationNameKey];
+                CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake([preset[@"latitude"] doubleValue],
+                                                                              [preset[@"longitude"] doubleValue]);
+                NSString *presetName = preset[@"name"];
                 WCAtlasVirtualLocationSetCoordinate(coordinate, presetName.length ? presetName : nil);
                 [self reload];
             }

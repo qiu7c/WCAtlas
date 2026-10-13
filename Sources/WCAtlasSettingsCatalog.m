@@ -798,10 +798,10 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasVirtualLocationSections(void) {
     NSMutableArray<WCAtlasSettingItem *> *presetItems = [NSMutableArray array];
     for (NSUInteger index = 0; index < presets.count; index++) {
         NSDictionary<NSString *, id> *preset = presets[index];
-        NSString *presetName = preset[WCAtlasVirtualLocationNameKey];
+        NSString *presetName = preset[@"name"];
         NSString *presetDetail = [NSString stringWithFormat:@"%.5f, %.5f",
-                                  [preset[WCAtlasVirtualLocationLatitudeKey] doubleValue],
-                                  [preset[WCAtlasVirtualLocationLongitudeKey] doubleValue]];
+                                  [preset[@"latitude"] doubleValue],
+                                  [preset[@"longitude"] doubleValue]];
         [presetItems addObject:WCAtlasItem(presetName.length ? presetName : @"未命名坐标", presetDetail, @"star",
                                            WCAtlasSettingRowKindDetail,
                                            [NSString stringWithFormat:@"%lu", (unsigned long)index],
