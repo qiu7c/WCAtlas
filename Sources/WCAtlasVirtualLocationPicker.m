@@ -149,6 +149,21 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
     WCAtlasVirtualLocationFinishPicking();
 }
 
+/// The picker treats its delegate as a private protocol rather than a public one,
+/// so a method this bridge does not implement is not an error the picker guards
+/// against: it is a message send that ends the process. Answering every selector
+/// turns that into a logged no-op. respondsToSelector: still consults the real
+/// method list, so anything the picker does check for behaves exactly as before.
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)selector {
+    NSMethodSignature *signature = [super methodSignatureForSelector:selector];
+    if (signature) return signature;
+    return [NSMethodSignature signatureWithObjCTypes:"@@:"];
+}
+
+- (void)forwardInvocation:(NSInvocation *)invocation {
+    WCAtlasVirtualLocationTrace(@"[VL] picker asked delegate for %@", NSStringFromSelector(invocation.selector));
+}
+
 @end
 
 #pragma mark - Hooks
