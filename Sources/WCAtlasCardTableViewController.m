@@ -11,6 +11,12 @@
     return [super initWithStyle:UITableViewStyleInsetGrouped];
 }
 
+- (instancetype)init {
+    // Pages are sometimes built with [X new], which never reaches initWithStyle:,
+    // so the plain style is turned into the shared one here as well.
+    return [super initWithStyle:UITableViewStyleInsetGrouped];
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;

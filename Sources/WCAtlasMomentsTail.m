@@ -345,7 +345,9 @@ static void WCAtlasMomentsTailResetPostSession(void) {
 
 #pragma mark - Picker
 
-@interface WCAtlasMomentsTailPickerViewController : UITableViewController <UISearchResultsUpdating>
+#import "WCAtlasCardTableViewController.h"
+
+@interface WCAtlasMomentsTailPickerViewController : WCAtlasCardTableViewController <UISearchResultsUpdating>
 @property (nonatomic, assign) BOOL postSessionMode;
 @property (nonatomic, copy) void (^completion)(void);
 @property (nonatomic, copy) NSArray<NSDictionary<NSString *, NSString *> *> *displayedEntries;
