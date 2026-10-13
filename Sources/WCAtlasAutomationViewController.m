@@ -85,7 +85,7 @@ static NSString *WCAtlasAutomationSourceName(WCAtlasAutomationSourceType type) {
 
 @end
 
-@interface WCAtlasAutomationEditorViewController : UITableViewController <UITextFieldDelegate, UITextViewDelegate>
+@interface WCAtlasAutomationEditorViewController : WCAtlasCardTableViewController <UITextFieldDelegate, UITextViewDelegate>
 @property (nonatomic, strong) WCAtlasAutomationTask *task;
 @property (nonatomic, strong) UISwitch *enabledSwitch;
 @property (nonatomic, strong) UITextField *nameField;

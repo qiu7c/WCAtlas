@@ -3,7 +3,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /// Manages scheduled fixed-text, message-library, and JavaScript tasks.
-@interface WCAtlasAutomationViewController : UITableViewController
+#import "WCAtlasCardTableViewController.h"
+
+@interface WCAtlasAutomationViewController : WCAtlasCardTableViewController
 @end
 
 /// Manages keyword reply tasks and their conversation scope rules.
