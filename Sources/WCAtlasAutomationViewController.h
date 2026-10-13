@@ -1,9 +1,9 @@
 #import <UIKit/UIKit.h>
 
+#import "WCAtlasCardTableViewController.h"
 NS_ASSUME_NONNULL_BEGIN
 
 /// Manages scheduled fixed-text, message-library, and JavaScript tasks.
-#import "WCAtlasCardTableViewController.h"
 
 @interface WCAtlasAutomationViewController : WCAtlasCardTableViewController
 @end

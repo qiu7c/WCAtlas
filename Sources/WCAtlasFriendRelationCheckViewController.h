@@ -1,8 +1,8 @@
 #import <UIKit/UIKit.h>
 
+#import "WCAtlasCardTableViewController.h"
 NS_ASSUME_NONNULL_BEGIN
 
-#import "WCAtlasCardTableViewController.h"
 
 @interface WCAtlasFriendRelationCheckViewController : WCAtlasCardTableViewController
 @end
