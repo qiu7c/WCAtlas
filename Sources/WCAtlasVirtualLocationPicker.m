@@ -140,6 +140,17 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
 /// this method existing. The argument is deliberately untouched: its type is
 /// unknown, and the coordinate can be read from the picker itself, which is safer
 /// than treating an unknown pointer as an object.
+/// The picker asks its delegate for the item it should show in the top right, and
+/// the device log named this selector exactly. Without it the page has no done
+/// item at all, which is what the reporter saw, and the only way out was cancel.
+/// A system item brings the localised title without a literal in the source, and
+/// its action is the save request the reference's selector table also carries.
+- (id)onGetRightBarButton {
+    return [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
+                                                         target:self
+                                                         action:@selector(saveFromPicker:)];
+}
+
 - (void)saveFromPicker:(id)sender {
     (void)sender;
     WCAtlasVirtualLocationTrace(@"[VL] picker asked to save");
@@ -238,16 +249,6 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
     WCAtlasVirtualLocationSetPicking(YES);
     // The reference pushes when there is a stack and presents otherwise, which is
     // also what keeps the picker's own back button working.
-    // The reference's page carries a done item in the top right. If WeChat only
-    // builds one when its host supplies it, this gives the page the same
-    // affordance, and the nil check keeps it from doubling up on one the picker
-    // made itself. The system item renders the localised title.
-    if (!picker.navigationItem.rightBarButtonItem) {
-        picker.navigationItem.rightBarButtonItem =
-            [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                          target:bridge
-                                                          action:@selector(saveFromPicker:)];
-    }
 
     UINavigationController *navigation = fromViewController.navigationController;
     if (navigation) {
