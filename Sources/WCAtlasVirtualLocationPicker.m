@@ -7,7 +7,7 @@
 
 extern void MSHookMessageEx(Class cls, SEL selector, IMP replacement, IMP *original);
 
-#import "WCAtlasLog.h"
+#import "WCAtlasLogging.h"
 
 static NSString *const WCAtlasVirtualLocationPickerClassName = @"MMPickLocationViewController";
 /// Taken from the reference plugin's own call site: scene type 0, and "only use
