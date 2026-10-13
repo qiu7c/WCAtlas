@@ -7,6 +7,8 @@
 
 extern void MSHookMessageEx(Class cls, SEL selector, IMP replacement, IMP *original);
 
+#import "WCAtlasLog.h"
+
 static NSString *const WCAtlasVirtualLocationPickerClassName = @"MMPickLocationViewController";
 /// Taken from the reference plugin's own call site: scene type 0, and "only use
 /// user location" off.
@@ -63,9 +65,12 @@ static BOOL WCAtlasVirtualLocationCoordinateFromObject(id object, CLLocationCoor
 /// capturing anything at all.
 static BOOL WCAtlasVirtualLocationCaptureCoordinateFromPicker(id picker) {
     if (!picker) return NO;
-    for (NSString *name in @[@"selectedLocation", @"currentSelectedLocation"]) {
+    for (NSString *name in @[@"currLocation", @"getLocationPOIItem"]) {
         SEL selector = NSSelectorFromString(name);
-        if (![picker respondsToSelector:selector]) continue;
+        if (![picker respondsToSelector:selector]) {
+            WCAtlasLogAlways(@"[VL] picker has no %@", name);
+            continue;
+        }
         id value = ((id (*)(id, SEL))objc_msgSend)(picker, selector);
         CLLocationCoordinate2D coordinate = kCLLocationCoordinate2DInvalid;
         if (value && WCAtlasVirtualLocationCoordinateFromObject(value, &coordinate)) {
@@ -98,13 +103,15 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
 @implementation WCAtlasVirtualLocationPickerBridge
 
 - (void)onFinishSelectedLocation {
-    // The coordinate usually arrives through wx_saveSelectedLocation:, but this
-    // is the moment the picker says it has one, so it is worth one more read of
-    // the same conservative accessors rather than silently keeping nothing.
+    WCAtlasLogAlways(@"[VL] picker finished");
+    // The picker says it has a selection at this point, so this is the moment to
+    // read it back through the accessors that were verified to exist in the
+    // reference build, rather than silently keeping nothing.
     WCAtlasVirtualLocationCaptureCoordinateFromPicker(self.picker);
 }
 
 - (void)onCancelSeletctedLocation {
+    WCAtlasLogAlways(@"[VL] picker cancelled");
     // WeChat's own spelling, typo included.
     WCAtlasVirtualLocationFinishPicking();
 }
@@ -113,20 +120,7 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
 
 #pragma mark - Hooks
 
-static void (*WCAtlasOriginalSaveSelectedLocation)(id, SEL, id);
 static void (*WCAtlasOriginalPickerViewDidDisappear)(id, SEL, BOOL);
-
-static void WCAtlasSaveSelectedLocationReplacement(id self, SEL _cmd, id location) {
-    if (WCAtlasOriginalSaveSelectedLocation) WCAtlasOriginalSaveSelectedLocation(self, _cmd, location);
-    // Pass straight through unless our own picking session is running, so a normal
-    // "send location" behaves exactly as it did before.
-    if (!WCAtlasVirtualLocationActiveBridge) return;
-    CLLocationCoordinate2D coordinate = kCLLocationCoordinate2DInvalid;
-    if (WCAtlasVirtualLocationCoordinateFromObject(location, &coordinate)) {
-        WCAtlasVirtualLocationSetCoordinate(coordinate, nil);
-    }
-    WCAtlasVirtualLocationFinishPicking();
-}
 
 static void WCAtlasPickerViewDidDisappearReplacement(id self, SEL _cmd, BOOL animated) {
     if (WCAtlasOriginalPickerViewDidDisappear) WCAtlasOriginalPickerViewDidDisappear(self, _cmd, animated);
@@ -139,13 +133,6 @@ static void WCAtlasPickerViewDidDisappearReplacement(id self, SEL _cmd, BOOL ani
 static void WCAtlasVirtualLocationInstallPickerHooks(Class pickerClass) {
     if (WCAtlasVirtualLocationPickerHooksInstalled || !pickerClass) return;
     WCAtlasVirtualLocationPickerHooksInstalled = YES;
-    SEL saveSelector = NSSelectorFromString(@"wx_saveSelectedLocation:");
-    if (class_getInstanceMethod(pickerClass, saveSelector)) {
-        MSHookMessageEx(pickerClass,
-                        saveSelector,
-                        (IMP)WCAtlasSaveSelectedLocationReplacement,
-                        (IMP *)&WCAtlasOriginalSaveSelectedLocation);
-    }
     SEL disappearSelector = @selector(viewDidDisappear:);
     if (class_getInstanceMethod(pickerClass, disappearSelector)) {
         MSHookMessageEx(pickerClass,
@@ -161,14 +148,23 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
                                                void (^onFinish)(void)) {
     if (!fromViewController) return NO;
     Class pickerClass = objc_getClass(WCAtlasVirtualLocationPickerClassName.UTF8String);
-    if (!pickerClass) return NO;
+    if (!pickerClass) {
+        WCAtlasLogAlways(@"[VL] class not found: %@", WCAtlasVirtualLocationPickerClassName);
+        return NO;
+    }
     SEL initializer = NSSelectorFromString(@"initWithSceneType:OnlyUseUserLocation:");
-    if (![pickerClass instancesRespondToSelector:initializer]) return NO;
+    if (![pickerClass instancesRespondToSelector:initializer]) {
+        WCAtlasLogAlways(@"[VL] initializer missing");
+        return NO;
+    }
     WCAtlasVirtualLocationInstallPickerHooks(pickerClass);
     id (*initializerMessage)(id, SEL, NSInteger, BOOL) = (id (*)(id, SEL, NSInteger, BOOL))objc_msgSend;
     UIViewController *picker = initializerMessage([pickerClass alloc], initializer,
                                                   WCAtlasVirtualLocationPickerSceneType, NO);
-    if (!picker) return NO;
+    if (!picker) {
+        WCAtlasLogAlways(@"[VL] picker init returned nil");
+        return NO;
+    }
     WCAtlasVirtualLocationPickerBridge *bridge = [WCAtlasVirtualLocationPickerBridge new];
     bridge.picker = picker;
     SEL delegateSelector = NSSelectorFromString(@"setDelegate:");
@@ -183,8 +179,10 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
     // also what keeps the picker's own back button working.
     UINavigationController *navigation = fromViewController.navigationController;
     if (navigation) {
+        WCAtlasLogAlways(@"[VL] pushing picker");
         [navigation pushViewController:picker animated:YES];
     } else {
+        WCAtlasLogAlways(@"[VL] presenting picker");
         UINavigationController *wrapper = [[UINavigationController alloc] initWithRootViewController:picker];
         [fromViewController presentViewController:wrapper animated:YES completion:nil];
     }
