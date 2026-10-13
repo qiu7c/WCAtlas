@@ -92,13 +92,16 @@ static void WCAtlasVirtualLocationFinishPicking(void) {
 /// reference names them without a colon, and an argument that is not really there
 /// would be read as a pointer.
 @interface WCAtlasVirtualLocationPickerBridge : NSObject
+@property (nonatomic, weak, nullable) UIViewController *picker;
 @end
 
 @implementation WCAtlasVirtualLocationPickerBridge
 
 - (void)onFinishSelectedLocation {
-    // The coordinate arrives through wx_saveSelectedLocation:, so the gate stays
-    // up until the picker actually goes away.
+    // The coordinate usually arrives through wx_saveSelectedLocation:, but this
+    // is the moment the picker says it has one, so it is worth one more read of
+    // the same conservative accessors rather than silently keeping nothing.
+    WCAtlasVirtualLocationCaptureCoordinateFromPicker(self.picker);
 }
 
 - (void)onCancelSeletctedLocation {
@@ -167,6 +170,7 @@ BOOL WCAtlasVirtualLocationPresentWeChatPicker(UIViewController *fromViewControl
                                                   WCAtlasVirtualLocationPickerSceneType, NO);
     if (!picker) return NO;
     WCAtlasVirtualLocationPickerBridge *bridge = [WCAtlasVirtualLocationPickerBridge new];
+    bridge.picker = picker;
     SEL delegateSelector = NSSelectorFromString(@"setDelegate:");
     if ([picker respondsToSelector:delegateSelector]) {
         ((void (*)(id, SEL, id))objc_msgSend)(picker, delegateSelector, bridge);
