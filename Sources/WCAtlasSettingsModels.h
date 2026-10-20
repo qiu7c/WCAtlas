@@ -83,7 +83,6 @@ typedef NS_ENUM(NSInteger, WCAtlasSettingAction) {
     WCAtlasSettingActionMomentsCommentAntiDeleteText,
     WCAtlasSettingActionMomentsCommentAntiDeleteFontSize,
     WCAtlasSettingActionInAppNotificationAppearance,
-    WCAtlasSettingActionCallRecordings,
     WCAtlasSettingActionCallVoiceEffect,
     WCAtlasSettingActionAutomations,
     WCAtlasSettingActionKeywordReplies,

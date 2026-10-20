@@ -19,8 +19,6 @@
 #import "WCAtlasSendConfirmationViewController.h"
 #import "WCAtlasMomentsReminder.h"
 #import "WCAtlasMomentsTail.h"
-#import "WCAtlasCallRecordingsViewController.h"
-#import "WCAtlasCallAudio.h"
 #import "WCAtlasAutomationViewController.h"
 #import "WCAtlasHomeCategories.h"
 #import "WCAtlasVirtualLocation.h"
@@ -755,7 +753,6 @@ static char WCAtlasContactSearchLogicKey;
         case WCAtlasSettingActionMessageTimeAvatarSpacing: [self presentNumberEditorWithTitle:item.title message:@"请输入 -6 到 8 之间的数值；负值向上，正值向下" key:WCAtlasChatMessageTimeAvatarSpacingKey minimum:-6 maximum:8 notifyChange:YES applyScale:NO]; break;
         case WCAtlasSettingActionPluginManager: [self push:[WCAtlasPluginsViewController new]]; break;
         case WCAtlasSettingActionInAppNotificationAppearance: [self push:[WCAtlasInAppNotificationSettingsViewController new]]; break;
-        case WCAtlasSettingActionCallRecordings: [self push:[WCAtlasCallRecordingsViewController new]]; break;
         case WCAtlasSettingActionCallVoiceEffect: {
             __weak typeof(self) weakSelf = self;
             WCAtlasPresentCallVoiceEffectPicker(self.viewController, ^{ [weakSelf reload]; });

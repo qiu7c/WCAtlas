@@ -32,7 +32,6 @@ extern "C" void MSHookMessageEx(Class _class, SEL message, IMP hook, IMP *old);
 #import "Sources/WCAtlasPrivateAPI.h"
 #import "Sources/WCAtlasVirtualLocation.h"
 #import "Sources/WCAtlasNavigationAppearance.h"
-#import "Sources/WCAtlasCallAudio.h"
 #import "Sources/WCAtlasRuntimeFeatures.h"
 #import "Sources/WCAtlasInterfaceTweaks.h"
 #import "Sources/WCAtlasMessageTime.h"
@@ -47,7 +46,6 @@ extern "C" void MSHookMessageEx(Class _class, SEL message, IMP hook, IMP *old);
 #import "Sources/WCAtlasInfoListViewController.h"
 #import "Sources/WCAtlasSilkEncoder.h"
 #import "Sources/WCAtlasInAppNotification.h"
-#import "Sources/WCAtlasMentionHighlight.h"
 #import "Sources/WCAtlasHomeCategories.h"
 #import "Sources/WCAtlasChatTTS.h"
 
@@ -11312,7 +11310,6 @@ __attribute__((constructor)) static void WCAtlasInstallHomeLeadingSwipe(void) {
 
 - (void)viewWillAppear:(BOOL)animated {
     %orig(animated);
-    WCAtlasMentionHighlightInstallHooks();
     WCAtlasCleanupOfficialChatSearch(self);
     objc_setAssociatedObject(self, &WCAtlasChatSearchTransitionKey, nil,
                              OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -14060,7 +14057,6 @@ static void WCAtlasAudioDeviceStartedSuccess(id self, SEL selector, uintptr_t va
     if (WCAtlasOriginalAudioDeviceStartedSuccess) {
         WCAtlasOriginalAudioDeviceStartedSuccess(self, selector, value);
     }
-    WCAtlasCallAudioNotifyAudioDeviceStarted();
     if (!WCAtlasEnhancementEnabled(WCAtlasAutoSpeakerphoneEnabledKey)) return;
     SEL audioModeSelector = NSSelectorFromString(@"isAudioMode");
     if (![self respondsToSelector:audioModeSelector] ||
@@ -14170,8 +14166,6 @@ static void WCAtlasInstallExclusiveRedEnvelopeHooks(void) {
     WCAtlasAutomationStart();
     WCAtlasMomentsCommentAntiDeleteInstallHooks();
     WCAtlasMomentsTailInstallHooks();
-    WCAtlasCallAudioInstallHooks();
-    WCAtlasMentionHighlightInstallHooks();
     WCAtlasInstallChatTTSSendEntryHooks();
     WCAtlasInstallAutoSpeakerphoneHook();
     WCAtlasInstallExclusiveRedEnvelopeHooks();

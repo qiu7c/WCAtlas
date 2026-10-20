@@ -19,7 +19,8 @@ UIColor *WCAtlasBackChevronColor(void) {
 }
 
 UIImage *WCAtlasBackChevronImage(void) {
-    // Drawn at the size the system chevron occupies next to a 17pt title.
+    // Built from the same glyph the system uses, so its size, weight and shape match
+    // the native chevron instead of approximating it with a hand drawn path.
     // The stroke is inset by half its width so the round caps are not clipped
     // by the image bounds. It is not cached: the colour follows the interface
     // style, so a cached image would keep whichever style was drawn first.
@@ -47,10 +48,9 @@ BOOL WCAtlasNavigationAppearanceIsOwnedViewController(UIViewController *controll
 }
 
 static BOOL WCAtlasBackItemStyleEnabled(void) {
-    // Registered here as well as in the settings catalogue so the default holds
-    // even before the settings page has ever been opened.
-    [[NSUserDefaults standardUserDefaults] registerDefaults:@{ WCAtlasBlackBackItemKey: @YES }];
-    return WCAtlasEnhancementEnabled(WCAtlasBlackBackItemKey);
+    // Always on: the black back item is not a preference any more, so nothing is
+    // registered in the defaults and no switch can turn it off.
+    return YES;
 }
 
 void WCAtlasApplyBackButtonStyle(UINavigationBar *bar, UINavigationItem *item) {
@@ -63,8 +63,22 @@ void WCAtlasApplyBackButtonStyle(UINavigationBar *bar, UINavigationItem *item) {
     // would otherwise arrive in our bar as blue text.
     item.backButtonDisplayMode = UINavigationItemBackButtonDisplayModeMinimal;
     if (!bar) return;
-    bar.backIndicatorImage = WCAtlasBackChevronImage();
-    bar.backIndicatorTransitionMaskImage = WCAtlasBackChevronImage();
+    // The system chevron is used as-is. A hand drawn one only showed up on pages we
+    // own, so WeChat's own pages kept the native chevron and the two differed in both
+    // shape and size. Clearing the images lets every page share the native glyph, and
+    // the tint, which is the only thing that glyph follows, makes it pure black. Our
+    // pages carry no right bar item, so the tint has nothing else to colour.
+    bar.backIndicatorImage = nil;
+    bar.backIndicatorTransitionMaskImage = nil;
+    static UIColor *backTint;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        backTint = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
+            return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? UIColor.whiteColor
+                                                                        : UIColor.blackColor;
+        }];
+    });
+    bar.tintColor = backTint;
 }
 
 void WCAtlasRestoreBackButtonStyle(UINavigationBar *bar) {
@@ -75,6 +89,8 @@ void WCAtlasRestoreBackButtonStyle(UINavigationBar *bar) {
     if (bar.backIndicatorTransitionMaskImage == WCAtlasBackChevronImage()) {
         bar.backIndicatorTransitionMaskImage = nil;
     }
+    // Hand the bar back the tint it had before we arrived.
+    bar.tintColor = nil;
 }
 
 #pragma mark - Hooks

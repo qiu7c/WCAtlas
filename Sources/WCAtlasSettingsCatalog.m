@@ -11,7 +11,6 @@
 #import "WCAtlasMomentsReminder.h"
 #import "WCAtlasInAppNotification.h"
 #import "WCAtlasPluginManager.h"
-#import "WCAtlasMentionHighlight.h"
 #import "WCAtlasHomeCategories.h"
 #import "WCAtlasChatTTS.h"
 #import "WCAtlasVirtualLocation.h"
@@ -183,7 +182,6 @@ void WCAtlasSettingsRegisterDefaults(void) {
         WCAtlasMessageTripleTapOtherActionKey: @(WCAtlasReplySwipeActionNone),
         WCAtlasAvatarQuickMenuGestureKey: @(WCAtlasAvatarQuickMenuGestureOff),
         WCAtlasQuoteJumpEnabledKey: @NO,
-        WCAtlasMentionHighlightEnabledKey: @NO,
         WCAtlasHomeCategoriesEnabledKey: @NO,
         WCAtlasHomeCategoriesDataKey: @[],
         WCAtlasQuoteJumpImageEnabledKey: @YES,
@@ -212,7 +210,6 @@ void WCAtlasSettingsRegisterDefaults(void) {
         WCAtlasRedEnvelopeDetailFontSizeKey: @14.0,
         WCAtlasCallConfirmEnabledKey: @NO,
         WCAtlasAutoSpeakerphoneEnabledKey: @NO,
-        WCAtlasCallRecordingEnabledKey: @NO,
         WCAtlasCallVoiceDisguiseEnabledKey: @NO,
         WCAtlasCallVoiceModeKey: @0,
         WCAtlasCallRealtimeVoiceEffectEnabledKey: @NO,
@@ -404,7 +401,6 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasMessageSections(NSUserDefaults *
         WCAtlasItem(@"消息 +1", @"在可复读消息的长按菜单中加入 +1", @"plus.message", WCAtlasSettingRowKindSwitch, WCAtlasMessageRepeatMenuEnabledKey, nil, WCAtlasSettingActionNone),
         WCAtlasItem(@"表情存入自拍", @"在表情菜单中存入自拍表情", @"camera", WCAtlasSettingRowKindSwitch, WCAtlasEmoticonToSelfieEnabledKey, nil, WCAtlasSettingActionNone),
         WCAtlasItem(@"语音转发", @"在语音长按菜单中显示转发", @"waveform.badge.plus", WCAtlasSettingRowKindSwitch, WCAtlasVoiceForwardEnabledKey, nil, WCAtlasSettingActionNone),
-        WCAtlasItem(@"群聊 @ 高亮", @"高亮消息中的 @ 对象，点击打开联系人资料", @"at", WCAtlasSettingRowKindSwitch, WCAtlasMentionHighlightEnabledKey, nil, WCAtlasSettingActionNone),
     ]];
     WCAtlasAddFeature(interaction,
                     WCAtlasItem(@"媒体转语音", @"把音频文件、聊天视频和音乐卡片转成真正的微信语音", @"waveform", WCAtlasSettingRowKindSwitch, WCAtlasMediaToVoiceEnabledKey, nil, WCAtlasSettingActionNone),
@@ -508,8 +504,6 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasMessageSections(NSUserDefaults *
     [reminders addObjectsFromArray:@[
         WCAtlasItem(@"通话二次确认", @"发起语音或视频通话前确认", @"phone.badge.checkmark", WCAtlasSettingRowKindSwitch, WCAtlasCallConfirmEnabledKey, nil, WCAtlasSettingActionNone),
         WCAtlasItem(@"通话自动免提", @"通话音频设备启动成功后自动切换扬声器", @"speaker.wave.2", WCAtlasSettingRowKindSwitch, WCAtlasAutoSpeakerphoneEnabledKey, nil, WCAtlasSettingActionNone),
-        WCAtlasItem(@"通话录音", @"开启后每次通话自动录制并保存本地、对端和双方混合音轨", @"record.circle", WCAtlasSettingRowKindSwitch, WCAtlasCallRecordingEnabledKey, nil, WCAtlasSettingActionNone),
-        WCAtlasItem(@"已保存的通话录音", @"查看、试听或删除本地录音文件", @"waveform", WCAtlasSettingRowKindDetail, nil, @"查看", WCAtlasSettingActionCallRecordings),
         WCAtlasItem(@"通话语音伪装", @"在通话页面从消息库选择语音素材，替换上行麦克风输入", @"waveform.badge.mic", WCAtlasSettingRowKindSwitch, WCAtlasCallVoiceDisguiseEnabledKey, nil, WCAtlasSettingActionNone),
         WCAtlasItem(@"语音包混合麦克风", @"开启后保留部分现场麦克风声音；关闭时完全替换", @"slider.horizontal.3", WCAtlasSettingRowKindSwitch, WCAtlasCallVoiceModeKey, nil, WCAtlasSettingActionNone),
         WCAtlasItem(@"实时通话变声", @"在麦克风上行 PCM 中低延迟处理，不影响对端下行声音", @"waveform.badge.mic", WCAtlasSettingRowKindSwitch, WCAtlasCallRealtimeVoiceEffectEnabledKey, nil, WCAtlasSettingActionNone),
@@ -754,7 +748,6 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasInterfaceSections(NSUserDefaults
         [WCAtlasSettingSection sectionWithIdentifier:@"navigation" title:@"返回按钮"
                                              footer:@"只作用于 WCAtlas 自己的页面，微信原始页面不受影响。"
                                               items:@[
-            WCAtlasItem(@"纯黑返回箭头", @"隐藏返回按钮旁的前一页标题", @"arrow.left", WCAtlasSettingRowKindSwitch, WCAtlasBlackBackItemKey, nil, WCAtlasSettingActionNone),
         ]],
         [WCAtlasSettingSection sectionWithIdentifier:@"chat-capsules" title:@"聊天顶栏" footer:@"左右顶栏使用所选玻璃样式；置顶消息固定使用磨砂玻璃并跟随模糊强度，避免展开时背景溢出。" items:chatCapsules],
         [WCAtlasSettingSection sectionWithIdentifier:@"input" title:@"输入栏" footer:nil items:input],
