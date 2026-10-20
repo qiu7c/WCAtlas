@@ -101,15 +101,23 @@ static void WCAtlasApplySurfaceStyle(UIView *view, const WCAtlasCornerSurface *s
     objc_setAssociatedObject(view, &WCAtlasCornerSurfaceStyledKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
+/// Guards against a layout pass that re-enters itself, which would otherwise end in a stack
+/// overflow long before anything could be read from the crash log.
+static NSUInteger WCAtlasSurfaceLayoutDepth;
+
 static void WCAtlasSurfaceLayoutSubviews(id self, SEL command) {
+    if (WCAtlasSurfaceLayoutDepth > 6) return;
+    WCAtlasSurfaceLayoutDepth++;
     // The implementation is only installed on the classes in the table, so a lookup always
     // succeeds; subclasses resolve to the entry they inherit from.
     const WCAtlasCornerSurface *surface = WCAtlasSurfaceForClass(object_getClass(self));
-    if (!surface) return;
-    NSUInteger index = (NSUInteger)(surface - WCAtlasCornerSurfaceTable);
-    IMP original = WCAtlasCornerSurfaceOriginal[index];
-    if (original) ((void (*)(id, SEL))original)(self, command);
-    if ([self isKindOfClass:UIView.class]) WCAtlasApplySurfaceStyle((UIView *)self, surface);
+    if (surface) {
+        NSUInteger index = (NSUInteger)(surface - WCAtlasCornerSurfaceTable);
+        IMP original = WCAtlasCornerSurfaceOriginal[index];
+        if (original) ((void (*)(id, SEL))original)(self, command);
+        if ([self isKindOfClass:UIView.class]) WCAtlasApplySurfaceStyle((UIView *)self, surface);
+    }
+    WCAtlasSurfaceLayoutDepth--;
 }
 
 void WCAtlasInstallCornerSurfaceDefaults(void) {
@@ -129,9 +137,19 @@ NSInteger WCAtlasInstallCornerSurfaces(void) {
     for (NSUInteger index = 0; index < WCAtlasCornerSurfaceCount; index++) {
         const WCAtlasCornerSurface *surface = &WCAtlasCornerSurfaceTable[index];
         if (!surface->className || WCAtlasCornerSurfaceSwizzled[index]) continue;
-        Class cls = NSClassFromString([NSString stringWithUTF8String:surface->className]);
+        NSString *name = [NSString stringWithUTF8String:surface->className];
+        if (!name) continue;
+        Class cls = NSClassFromString(name);
         if (!cls) continue;
         Method method = class_getInstanceMethod(cls, selector);
+        if (!method) continue;
+        // class_getInstanceMethod also returns an inherited method. Replacing that would change
+        // the superclass for every subclass, and because two entries in the table can sit in the
+        // same hierarchy, the second pass then reads our own replacement back as "the original"
+        // and the method calls itself until the stack overflows. Adding a copy first gives this
+        // class an implementation of its own, so only this class is touched.
+        class_addMethod(cls, selector, method_getImplementation(method), method_getTypeEncoding(method));
+        method = class_getInstanceMethod(cls, selector);
         if (!method) continue;
         WCAtlasCornerSurfaceOriginal[index] = method_getImplementation(method);
         method_setImplementation(method, (IMP)WCAtlasSurfaceLayoutSubviews);
