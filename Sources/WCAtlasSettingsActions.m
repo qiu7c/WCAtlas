@@ -753,11 +753,7 @@ static char WCAtlasContactSearchLogicKey;
         case WCAtlasSettingActionMessageTimeAvatarSpacing: [self presentNumberEditorWithTitle:item.title message:@"请输入 -6 到 8 之间的数值；负值向上，正值向下" key:WCAtlasChatMessageTimeAvatarSpacingKey minimum:-6 maximum:8 notifyChange:YES applyScale:NO]; break;
         case WCAtlasSettingActionPluginManager: [self push:[WCAtlasPluginsViewController new]]; break;
         case WCAtlasSettingActionInAppNotificationAppearance: [self push:[WCAtlasInAppNotificationSettingsViewController new]]; break;
-        case WCAtlasSettingActionCallVoiceEffect: {
-            __weak typeof(self) weakSelf = self;
-            WCAtlasPresentCallVoiceEffectPicker(self.viewController, ^{ [weakSelf reload]; });
-            break;
-        }
+
         case WCAtlasSettingActionAutomations: [self push:[WCAtlasAutomationViewController new]]; break;
         case WCAtlasSettingActionKeywordReplies: [self push:[WCAtlasKeywordReplyViewController new]]; break;
         case WCAtlasSettingActionHomeCategories: [self push:[WCAtlasHomeCategoriesViewController new]]; break;

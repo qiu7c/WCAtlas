@@ -212,8 +212,6 @@ void WCAtlasSettingsRegisterDefaults(void) {
         WCAtlasAutoSpeakerphoneEnabledKey: @NO,
         WCAtlasCallVoiceDisguiseEnabledKey: @NO,
         WCAtlasCallVoiceModeKey: @0,
-        WCAtlasCallRealtimeVoiceEffectEnabledKey: @NO,
-        WCAtlasCallRealtimeVoiceEffectPresetKey: @1,
         WCAtlasQRCodeCameraSourceEnabledKey: @NO,
         WCAtlasAutoOriginalImageEnabledKey: @NO,
         WCAtlasAutoCombineSendEnabledKey: @NO,
@@ -506,10 +504,6 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasMessageSections(NSUserDefaults *
         WCAtlasItem(@"通话自动免提", @"通话音频设备启动成功后自动切换扬声器", @"speaker.wave.2", WCAtlasSettingRowKindSwitch, WCAtlasAutoSpeakerphoneEnabledKey, nil, WCAtlasSettingActionNone),
         WCAtlasItem(@"通话语音伪装", @"在通话页面从消息库选择语音素材，替换上行麦克风输入", @"waveform.badge.mic", WCAtlasSettingRowKindSwitch, WCAtlasCallVoiceDisguiseEnabledKey, nil, WCAtlasSettingActionNone),
         WCAtlasItem(@"语音包混合麦克风", @"开启后保留部分现场麦克风声音；关闭时完全替换", @"slider.horizontal.3", WCAtlasSettingRowKindSwitch, WCAtlasCallVoiceModeKey, nil, WCAtlasSettingActionNone),
-        WCAtlasItem(@"实时通话变声", @"在麦克风上行 PCM 中低延迟处理，不影响对端下行声音", @"waveform.badge.mic", WCAtlasSettingRowKindSwitch, WCAtlasCallRealtimeVoiceEffectEnabledKey, nil, WCAtlasSettingActionNone),
-        WCAtlasItem(@"实时变声效果", @"选择原声、明亮女声、低沉男声、机器人或电音", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, nil,
-                  WCAtlasCurrentSelection(@[@"原声", @"明亮女声", @"低沉男声", @"机器人", @"电音"][MIN(4, MAX(0, [defaults integerForKey:WCAtlasCallRealtimeVoiceEffectPresetKey]))]),
-                  WCAtlasSettingActionCallVoiceEffect),
         WCAtlasItem(@"通知直达聊天", @"点击通知后进入对应会话", @"bubble.left.and.arrow.forward", WCAtlasSettingRowKindSwitch, WCAtlasNotificationDirectChatEnabledKey, nil, WCAtlasSettingActionNone),
     ]];
 
