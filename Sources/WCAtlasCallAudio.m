@@ -1468,13 +1468,14 @@ void WCAtlasCallAudioInstallHooks(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         WCAtlasCallFileQueue = dispatch_queue_create("com.qiu7c.wcatlas.call-audio-files", DISPATCH_QUEUE_SERIAL);
-        MSHookFunction((void *)AudioUnitRender, (void *)WCAtlasAudioUnitRender,
-                       (void **)&WCAtlasOriginalAudioUnitRender);
-        MSHookFunction((void *)AudioUnitSetProperty, (void *)WCAtlasAudioUnitSetProperty,
-                       (void **)&WCAtlasOriginalAudioUnitSetProperty);
-        MSHookFunction((void *)AudioComponentInstanceDispose,
-                       (void *)WCAtlasAudioComponentInstanceDispose,
-                       (void **)&WCAtlasOriginalAudioComponentInstanceDispose);
+        // These three calls used to patch AudioToolbox in place. Inline patching writes
+        // into a dyld shared cache page, and such a page can hold code from several
+        // libraries at once: when the system reclaims it, unrelated libraries abort too,
+        // which is why the crashes surfaced in Moments, the chat list and the camera.
+        // The adapters are kept referenced for the redesign, but nothing is patched.
+        WCAtlasLog(@"通话音频：已停用内联钩子，不再改写系统库代码页（render=%p setProperty=%p dispose=%p）",
+                 (void *)WCAtlasAudioUnitRender, (void *)WCAtlasAudioUnitSetProperty,
+                 (void *)WCAtlasAudioComponentInstanceDispose);
         Class cls = NSClassFromString(@"AUAudioDevice");
         WCAtlasInstallLifecycleHook(cls, @"StartRecordAndPlayForVoIPWithRoomID:roomKey:",
                                  (IMP)WCAtlasStartTwoArguments, (IMP *)&WCAtlasOriginalStartTwoArguments, 4);
