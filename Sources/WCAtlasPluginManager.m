@@ -193,7 +193,6 @@ void WCAtlasPluginManagerRegisterSavedQuickSwitches(void) {
     }];
 }
 
-@class WCAtlasPluginsViewController;
 
 static UIImage *WCPEntryIcon(void) { return WCPBuiltinPluginIcon([NSUserDefaults.standardUserDefaults integerForKey:WCPEntryIconStyleKey]); }
 

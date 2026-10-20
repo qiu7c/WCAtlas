@@ -57,7 +57,6 @@ typedef NS_ENUM(NSInteger, WCAtlasSettingAction) {
     WCAtlasSettingActionMessageTimeColor,
     WCAtlasSettingActionMessageTimePosition,
     WCAtlasSettingActionMessageTimeAvatarSpacing,
-    WCAtlasSettingActionPluginManager,
     WCAtlasSettingActionHapticIntensity,
     WCAtlasSettingActionStepMode,
     WCAtlasSettingActionFixedSteps,

@@ -768,10 +768,6 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasPluginSections(NSUserDefaults *d
     ];
     NSMutableArray<WCAtlasSettingItem *> *management = [NSMutableArray arrayWithObject:
         WCAtlasItem(@"配置管理", @"导入、导出或重置 WCAtlas 配置", @"externaldrive", WCAtlasSettingRowKindDetail, nil, @"管理", WCAtlasSettingActionConfigManager)];
-    WCAtlasAddFeature(management,
-        WCAtlasItem(@"内置插件管理", @"与懒猫插件管理不兼容；开启后重启微信以收录其他插件", @"square.stack.3d.up", WCAtlasSettingRowKindSwitch, WCAtlasPluginManagerEnabledKey, nil, WCAtlasSettingActionNone),
-        @[WCAtlasItem(@"打开内置插件管理", @"管理分类、排序与快捷开关", @"rectangle.stack", WCAtlasSettingRowKindDetail, nil, @"打开", WCAtlasSettingActionPluginManager)],
-        defaults, [NSSet setWithArray:[defaults arrayForKey:WCAtlasCollapsedFeaturesKey] ?: @[]]);
     return @[
         [WCAtlasSettingSection sectionWithIdentifier:@"in-app-notifications" title:@"通知" footer:@"仅影响 WCAtlas 在微信前台显示的自绘提醒。" items:notifications],
         [WCAtlasSettingSection sectionWithIdentifier:@"logging" title:@"日志" footer:@"运行日志只保存在内存中，退出微信后自动清空。" items:logging],

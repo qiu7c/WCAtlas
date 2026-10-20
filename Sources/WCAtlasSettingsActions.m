@@ -751,7 +751,7 @@ static char WCAtlasContactSearchLogicKey;
         case WCAtlasSettingActionMessageTimeColor: [self presentMessageTimeColorPickerForKey:item.defaultsKey title:item.title]; break;
         case WCAtlasSettingActionMessageTimePosition: [self presentMessageTimePositionPicker]; break;
         case WCAtlasSettingActionMessageTimeAvatarSpacing: [self presentNumberEditorWithTitle:item.title message:@"请输入 -6 到 8 之间的数值；负值向上，正值向下" key:WCAtlasChatMessageTimeAvatarSpacingKey minimum:-6 maximum:8 notifyChange:YES applyScale:NO]; break;
-        case WCAtlasSettingActionPluginManager: [self push:[WCAtlasPluginsViewController new]]; break;
+        
         case WCAtlasSettingActionInAppNotificationAppearance: [self push:[WCAtlasInAppNotificationSettingsViewController new]]; break;
 
         case WCAtlasSettingActionAutomations: [self push:[WCAtlasAutomationViewController new]]; break;
