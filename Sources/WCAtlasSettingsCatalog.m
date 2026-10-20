@@ -1,6 +1,8 @@
 #import "WCAtlasSettingsCatalog.h"
 #import "WCAtlasAntiRevoke.h"
 #import "WCAtlasEnhancements.h"
+#import "WCAtlasGlobalCorner.h"
+#import "WCAtlasCornerSurfaces.h"
 #import "WCAtlasInterfaceTweaks.h"
 #import "WCAtlasLogging.h"
 #import "WCAtlasQuickReplyStore.h"
@@ -737,7 +739,22 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasInterfaceSections(NSUserDefaults
         return @[[WCAtlasSettingSection sectionWithIdentifier:@"interface-disabled" title:nil
                                                      footer:@"关闭对应开关后恢复微信原始界面。" items:disabled]];
     }
+    NSMutableArray *globalCorner = [NSMutableArray array];
+    WCAtlasAddFeature(globalCorner,
+                     WCAtlasItem(@"全局圆角", @"整页套用卡片圆角，使用连续曲线", @"rectangle.roundedtop", WCAtlasSettingRowKindSwitch, WCAtlasGlobalCornerEnabledKey, nil, WCAtlasSettingActionNone),
+                     @[
+        WCAtlasItem(@"圆角半径", @"输入 0 到 40；0 表示关闭", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, nil, [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasGlobalCornerRadiusKey]], WCAtlasSettingActionGlobalCornerRadius),
+        WCAtlasItem(@"描边宽度", @"输入 0 到 3；0 表示无描边", @"rectangle.inset.filled", WCAtlasSettingRowKindDetail, nil, [NSString stringWithFormat:@"%.1f", [defaults doubleForKey:WCAtlasGlobalCornerStrokeKey]], WCAtlasSettingActionGlobalCornerStroke),
+    ], defaults, collapsed);
+    for (NSDictionary<NSString *, NSString *> *descriptor in WCAtlasCornerSurfaceDescriptors()) {
+        NSString *identifier = descriptor[@"identifier"];
+        [globalCorner addObject:WCAtlasItem(descriptor[@"title"], descriptor[@"subtitle"], descriptor[@"icon"],
+                                            WCAtlasSettingRowKindSwitch,
+                                            WCAtlasCornerKey(identifier, @"enabled"), nil, WCAtlasSettingActionNone)];
+    }
     return @[
+        [WCAtlasSettingSection sectionWithIdentifier:@"global-corner" title:@"全局圆角"
+                                             footer:@"关闭后恢复微信原始样式。" items:globalCorner],
         [WCAtlasSettingSection sectionWithIdentifier:@"display" title:@"显示" footer:@"关闭后恢复微信原始样式。" items:display],
         [WCAtlasSettingSection sectionWithIdentifier:@"navigation" title:@"返回按钮"
                                              footer:@"只作用于 WCAtlas 自己的页面，微信原始页面不受影响。"
