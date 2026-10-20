@@ -20,27 +20,17 @@ FOUNDATION_EXPORT NSString *const WCAtlasPluginManagerEnabledKey;
 - (void)removeSwitchWithKey:(NSString *)key;
 @end
 
-@interface WCAtlasPluginsViewController : UITableViewController
-@end
-
-@interface WCPPluginOrderEditorController : WCAtlasCardTableViewController
-- (instancetype)initWithOwner:(WCAtlasPluginsViewController *)owner;
-@end
-
+/// Injects the WCAtlas row into LazyCat's plugin list, pointing at our own settings page.
 FOUNDATION_EXPORT void WCAtlasInstallPluginManagerEntry(id moreViewController);
-FOUNDATION_EXPORT void WCAtlasPushPluginManager(id sender);
 /// Returns YES only when the external LazyCat WCPluginsMgr service is available.
 FOUNDATION_EXPORT BOOL WCAtlasExternalPluginManagerAvailable(void);
-/// Installs the shared `WCPluginsMgr` registration class for the built-in manager at runtime.
-/// Returns YES when WCAtlas owns the runtime class. It is never installed while an external
-/// manager owns the class name, and only installs when the built-in manager is enabled.
+/// Installs the shared `WCPluginsMgr` registration class at runtime.
+/// Returns YES when WCAtlas owns the runtime class. It is never installed while an
+/// external manager owns the class name.
 FOUNDATION_EXPORT BOOL WCAtlasInstallPluginRegistry(void);
-/// Adds a direct WCAtlas row only when neither the external nor built-in plugin registry owns it.
-/// Call after WeChat has built `NewSettingViewController`'s table model. The adapter does not reload
-/// the visible table, allowing first-load hooks to inject the row before the initial presentation.
+/// Adds a direct WCAtlas row to WeChat's settings page when no registry owns the entry.
 FOUNDATION_EXPORT void WCAtlasInstallSettingsFallbackEntry(id settingsController);
-/// Pushes the WCAtlas settings controller from the native WeChat settings page.
-/// Must be called on the main thread.
+/// Pushes the WCAtlas settings controller. Must be called on the main thread.
 FOUNDATION_EXPORT void WCAtlasPushSettingsController(id sender);
 FOUNDATION_EXPORT BOOL WCAtlasPluginManagerIsQuickSwitchRegistered(NSString *key);
 FOUNDATION_EXPORT void WCAtlasPluginManagerSetQuickSwitchRegistered(NSString *key, NSString *title, BOOL registered);

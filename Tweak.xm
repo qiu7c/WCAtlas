@@ -6983,7 +6983,6 @@ didReceiveNotificationResponse:(id)response
 
 %new
 - (void)pushPluginController {
-    WCAtlasPushPluginManager(self);
 }
 
 - (void)addCardsIfNeededToSection:(id)section {
