@@ -747,8 +747,11 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasInterfaceSections(NSUserDefaults
         WCAtlasItem(@"描边宽度", @"输入 0 到 3；0 表示无描边", @"rectangle.inset.filled", WCAtlasSettingRowKindDetail, nil, [NSString stringWithFormat:@"%.1f", [defaults doubleForKey:WCAtlasGlobalCornerStrokeKey]], WCAtlasSettingActionGlobalCornerStroke),
     ], defaults, collapsed);
     for (NSDictionary<NSString *, NSString *> *descriptor in WCAtlasCornerSurfaceDescriptors()) {
-        NSString *identifier = descriptor[@"identifier"];
-        [globalCorner addObject:WCAtlasItem(descriptor[@"title"], descriptor[@"subtitle"], descriptor[@"icon"],
+        NSString *identifier = descriptor[@"identifier"] ?: @"";
+        NSString *title = descriptor[@"title"] ?: @"";
+        NSString *subtitle = descriptor[@"subtitle"] ?: @"";
+        NSString *icon = descriptor[@"icon"] ?: @"";
+        [globalCorner addObject:WCAtlasItem(title, subtitle, icon,
                                             WCAtlasSettingRowKindSwitch,
                                             WCAtlasCornerKey(identifier, @"enabled"), nil, WCAtlasSettingActionNone)];
     }

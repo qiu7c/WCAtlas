@@ -19,7 +19,7 @@ void WCAtlasApplyCornerRadius(UIView *view, CGFloat radius, WCAtlasCornerCorners
 /// `masksToBounds` cannot cut it in half. Pass width 0 to remove an existing border.
 /// Re-apply after the view is laid out; the path is not observed automatically.
 void WCAtlasApplyCornerBorder(UIView *view, CGFloat radius, WCAtlasCornerCorners corners,
-                              CGFloat width, UIColor *color);
+                              CGFloat width, UIColor *_Nullable color);
 
 /// Restores the properties this module touched, so a view can return to WeChat's own style.
 void WCAtlasClearCornerStyle(UIView *view);

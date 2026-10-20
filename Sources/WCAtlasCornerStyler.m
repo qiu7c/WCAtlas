@@ -40,7 +40,7 @@ void WCAtlasApplyCornerRadius(UIView *view, CGFloat radius, WCAtlasCornerCorners
 }
 
 void WCAtlasApplyCornerBorder(UIView *view, CGFloat radius, WCAtlasCornerCorners corners,
-                              CGFloat width, UIColor *color) {
+                              CGFloat width, UIColor *_Nullable color) {
     if (!view) return;
     CAShapeLayer *border = objc_getAssociatedObject(view, &WCAtlasCornerBorderKey);
     if (width <= 0 || radius <= 0 || !color) {
