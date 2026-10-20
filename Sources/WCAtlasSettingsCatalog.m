@@ -3,6 +3,7 @@
 #import "WCAtlasEnhancements.h"
 #import "WCAtlasGlobalCorner.h"
 #import "WCAtlasCornerSurfaces.h"
+#import "WCAtlasHomeCorner.h"
 #import "WCAtlasInterfaceTweaks.h"
 #import "WCAtlasLogging.h"
 #import "WCAtlasQuickReplyStore.h"
@@ -854,7 +855,18 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *d
         }
     }
 
+    NSMutableArray<WCAtlasSettingItem *> *home = [NSMutableArray array];
+    WCAtlasAddFeature(home,
+                      WCAtlasItem(@"首页会话列表", @"每条会话变成一张独立卡片", @"house", WCAtlasSettingRowKindSwitch, WCAtlasHomeCornerKey(@"enabled"), nil, WCAtlasSettingActionNone),
+                      @[ WCAtlasItem(@"圆角半径", @"输入 0 到 40；0 表示关闭", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, WCAtlasHomeCornerKey(@"radius"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasHomeCornerKey(@"radius")]], WCAtlasSettingActionCornerSurfaceRadius),
+                         WCAtlasItem(@"左右边距", @"卡片距屏幕两侧的距离", @"arrow.left.and.right", WCAtlasSettingRowKindDetail, WCAtlasHomeCornerKey(@"margin"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasHomeCornerKey(@"margin")]], WCAtlasSettingActionCornerSurfaceRadius),
+                         WCAtlasItem(@"上下间距", @"两行卡片之间的空隙", @"arrow.up.and.down", WCAtlasSettingRowKindDetail, WCAtlasHomeCornerKey(@"spacing"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasHomeCornerKey(@"spacing")]], WCAtlasSettingActionCornerSurfaceRadius),
+                         WCAtlasItem(@"描边宽度", @"输入 0 到 3；0 表示无描边", @"rectangle.inset.filled", WCAtlasSettingRowKindDetail, WCAtlasHomeCornerKey(@"stroke"), [NSString stringWithFormat:@"%.1f", [defaults doubleForKey:WCAtlasHomeCornerKey(@"stroke")]], WCAtlasSettingActionCornerSurfaceRadius) ],
+                      defaults, collapsed);
+
     return @[
+        [WCAtlasSettingSection sectionWithIdentifier:@"corner-home" title:@"首页"
+                                             footer:@"先只改会话列表；开关打开后下面四项才生效。" items:home],
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-global" title:@"全局圆角"
                                              footer:@"关闭后微信恢复原始样式。" items:global],
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-surfaces" title:@"分场景圆角"

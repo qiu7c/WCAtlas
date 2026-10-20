@@ -1,6 +1,7 @@
 #import "WCAtlasGlobalCorner.h"
 
 #import "WCAtlasCornerSurfaces.h"
+#import "WCAtlasHomeCorner.h"
 
 #import <objc/runtime.h>
 
@@ -24,8 +25,10 @@ static void WCAtlasInstallCornerHook(void) {
 static void WCAtlasCornerSetup(void) {
     WCAtlasInstallGlobalCornerDefaults();
     WCAtlasInstallCornerSurfaceDefaults();
+    WCAtlasInstallHomeCornerDefaults();
     WCAtlasInstallCornerHook();
     WCAtlasInstallCornerSurfaces();
+    WCAtlasInstallHomeCorner();
 }
 
 __attribute__((constructor)) static void WCAtlasCornerBootstrap(void) {
