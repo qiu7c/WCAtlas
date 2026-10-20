@@ -467,6 +467,7 @@
         case WCAtlasSettingActionOpenMoments: [self openCategory:WCAtlasSettingsCategoryMoments]; break;
         case WCAtlasSettingActionOpenInterfaceDisabled: [self openCategory:WCAtlasSettingsCategoryInterfaceDisabled]; break;
         case WCAtlasSettingActionOpenEnhancements: [self openCategory:WCAtlasSettingsCategoryEnhancements]; break;
+        case WCAtlasSettingActionOpenCorner: [self openCategory:WCAtlasSettingsCategoryCorner]; break;
         case WCAtlasSettingActionOpenInterface: [self openCategory:WCAtlasSettingsCategoryInterface]; break;
         case WCAtlasSettingActionOpenPlugin: [self openCategory:WCAtlasSettingsCategoryPlugin]; break;
         case WCAtlasSettingActionOpenVirtualLocation: [self openCategory:WCAtlasSettingsCategoryVirtualLocation]; break;

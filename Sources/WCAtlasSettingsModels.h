@@ -10,7 +10,8 @@ typedef NS_ENUM(NSInteger, WCAtlasSettingsCategory) {
     WCAtlasSettingsCategoryEnhancements,
     WCAtlasSettingsCategoryInterface,
     WCAtlasSettingsCategoryPlugin,
-    WCAtlasSettingsCategoryVirtualLocation,
+        WCAtlasSettingsCategoryCorner,
+WCAtlasSettingsCategoryVirtualLocation,
 };
 
 typedef NS_ENUM(NSInteger, WCAtlasSettingRowKind) {
@@ -26,7 +27,9 @@ typedef NS_ENUM(NSInteger, WCAtlasSettingAction) {
     WCAtlasSettingActionOpenMoments,
     WCAtlasSettingActionOpenInterfaceDisabled,
     WCAtlasSettingActionOpenEnhancements,
-    WCAtlasSettingActionOpenInterface,
+        WCAtlasSettingActionOpenCorner,
+    WCAtlasSettingActionCornerSurfaceRadius,
+WCAtlasSettingActionOpenInterface,
     WCAtlasSettingActionOpenPlugin,
     WCAtlasSettingActionConfigManager,
     WCAtlasSettingActionOfficialTelegram,
