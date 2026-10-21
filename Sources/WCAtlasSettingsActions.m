@@ -662,6 +662,15 @@ static char WCAtlasContactSearchLogicKey;
 
 - (void)performActionForItem:(WCAtlasSettingItem *)item {
     switch (item.action) {
+        case WCAtlasSettingActionHomeCornerValue:
+            [self presentNumberEditorWithTitle:item.title
+                                       message:@"首页会话圆角参数，输入 0 到 40；0 表示关闭该项"
+                                           key:item.defaultsKey
+                                     minimum:0
+                                     maximum:40
+                                  notifyChange:YES
+                                    applyScale:NO];
+            break;
         case WCAtlasSettingActionConfigManager: [self push:[WCAtlasConfigManagerViewController new]]; break;
         case WCAtlasSettingActionVirtualLocationManual: {
             __weak typeof(self) weakSelf = self;

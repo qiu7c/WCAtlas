@@ -73,6 +73,7 @@ typedef NS_ENUM(NSInteger, WCAtlasSettingAction) {
     WCAtlasSettingActionAvatarQuickMenuGesture,
     WCAtlasSettingActionReplySwipeTriggerDistance,
     WCAtlasSettingActionGlobalAvatarCornerPercent,
+    WCAtlasSettingActionHomeCornerValue,
     WCAtlasSettingActionQuickReplyLibrary,
     WCAtlasSettingActionSendConfirmationConversations,
     WCAtlasSettingActionSendConfirmationPauseDuration,

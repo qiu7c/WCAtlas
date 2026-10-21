@@ -118,6 +118,7 @@ static BOOL WCAtlasHomeSessionCornerSwizzle(Class cls, SEL selector, IMP replace
 }
 
 NSInteger WCAtlasInstallHomeSessionCorner(void) {
+    WCAtlasInstallHomeSessionCornerDefaults();
     if (WCAtlasHomeSessionCornerHooked) return 1;
     Class cls = NSClassFromString(@"MainFrameItemView");
     if (!cls) return 0;
@@ -130,4 +131,25 @@ NSInteger WCAtlasInstallHomeSessionCorner(void) {
                                     &WCAtlasHomeSessionCornerOriginalBackground);
     WCAtlasHomeSessionCornerHooked = YES;
     return 1;
+}
+
+/// The row class only exists once WeChat's own image is loaded, so keep knocking instead of
+/// giving up on the first try the way the constructor-time code did before.
+static void WCAtlasHomeSessionCornerRetry(NSInteger attemptsLeft) {
+    if (WCAtlasInstallHomeSessionCorner()) return;
+    if (attemptsLeft <= 0) return;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        WCAtlasHomeSessionCornerRetry(attemptsLeft - 1);
+    });
+}
+
+__attribute__((constructor)) static void WCAtlasHomeSessionCornerBootstrap(void) {
+    if (NSThread.isMainThread) {
+        WCAtlasHomeSessionCornerRetry(40);
+        return;
+    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        WCAtlasHomeSessionCornerRetry(40);
+    });
 }
