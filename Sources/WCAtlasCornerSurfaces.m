@@ -97,6 +97,15 @@ static void WCAtlasApplySurfaceStyle(UIView *view, const WCAtlasCornerSurface *s
         return;
     }
     WCAtlasApplyCornerRadius(view, radius, WCAtlasCornerAll);
+    // A table view with no background of its own shows nothing when it is rounded, which is what
+    // made the home page look unchanged. Give the card an opaque colour so its corners read.
+    if (strcmp(surface->identifier, "homepage") == 0 || strcmp(surface->identifier, "mainFrame") == 0) {
+        view.backgroundColor = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
+            return traits.userInterfaceStyle == UIUserInterfaceStyleDark
+                ? [UIColor colorWithWhite:0.11 alpha:1.0]
+                : UIColor.whiteColor;
+        }];
+    }
     WCAtlasApplyCornerBorder(view, radius, WCAtlasCornerAll, 0, nil);
     objc_setAssociatedObject(view, &WCAtlasCornerSurfaceStyledKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }

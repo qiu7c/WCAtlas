@@ -13,6 +13,7 @@ static void WCAtlasReplacementViewDidLayoutSubviews(id self, SEL command) {
     // The constructor runs before WeChat has necessarily registered its own classes, and a class
     // that is missing then would otherwise never be hooked. Installing is a no-op once it worked.
     WCAtlasInstallHomeCorner();
+    WCAtlasInstallCornerSurfaces();
     // Every controller reaches here. The apply function returns immediately while the switch is
     // off, so a disabled style costs one defaults lookup per layout pass.
     WCAtlasGlobalCornerApplyToController(self);
