@@ -17,6 +17,9 @@ static void WCAtlasReplacementViewDidLayoutSubviews(id self, SEL command) {
     // Every controller reaches here. The apply function returns immediately while the switch is
     // off, so a disabled style costs one defaults lookup per layout pass.
     WCAtlasGlobalCornerApplyToController(self);
+    // The home page card needs a real class, and the one the reference implementation keys off
+    // is the main table view rather than a conversation cell.
+    WCAtlasHomeCornerApplyToController(self);
 }
 
 static void WCAtlasInstallCornerHook(void) {

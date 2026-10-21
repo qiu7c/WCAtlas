@@ -92,3 +92,40 @@ NSInteger WCAtlasInstallHomeCorner(void) {
     WCAtlasHomeCornerHooked = YES;
     return 1;
 }
+
+/// The home page is a table whose rows are the conversations, so the card is the table.
+static UIView *WCAtlasHomeCornerFindTable(UIView *root, NSInteger depth) {
+    if (!root || depth > 4) return nil;
+    if ([NSStringFromClass(root.class) isEqualToString:@"MMMainTableView"]) return root;
+    for (UIView *child in root.subviews) {
+        UIView *found = WCAtlasHomeCornerFindTable(child, depth + 1);
+        if (found) return found;
+    }
+    return nil;
+}
+
+void WCAtlasHomeCornerApplyToController(UIViewController *controller) {
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    if (![defaults boolForKey:WCAtlasHomeCornerKey(@"enabled")]) return;
+    UIView *root = controller.viewIfLoaded;
+    if (!root) return;
+    UIView *table = WCAtlasHomeCornerFindTable(root, 0);
+    if (!table || WCAtlasHomeCornerDepth > 0) return;
+    CGFloat margin = MAX(0, MIN(24, [defaults doubleForKey:WCAtlasHomeCornerKey(@"margin")]));
+    CGFloat spacing = MAX(0, MIN(16, [defaults doubleForKey:WCAtlasHomeCornerKey(@"spacing")]));
+    CGFloat radius = MAX(0, MIN(40, [defaults doubleForKey:WCAtlasHomeCornerKey(@"radius")]));
+    CGFloat stroke = MAX(0, MIN(3, [defaults doubleForKey:WCAtlasHomeCornerKey(@"stroke")]));
+
+    WCAtlasHomeCornerDepth++;
+    UIView *host = table.superview ?: root;
+    CGRect bounds = host.bounds;
+    // The frame is rebuilt on every pass, so nothing has to be undone when the switch goes off;
+    // the next pass just stops writing it and the host lays the table out again.
+    if (bounds.size.width > margin * 2 + 40) {
+        table.frame = CGRectInset(bounds, margin, spacing);
+    }
+    table.backgroundColor = WCAtlasHomeCornerCardColor();
+    WCAtlasApplyCornerRadius(table, radius, WCAtlasCornerAll);
+    WCAtlasApplyCornerBorder(table, radius, WCAtlasCornerAll, stroke, stroke > 0 ? UIColor.separatorColor : nil);
+    WCAtlasHomeCornerDepth--;
+}
