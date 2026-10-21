@@ -5,9 +5,9 @@
 
 static NSString *const WCAtlasHomeSessionCornerPrefix = @"com.qiu7c.wcatlas.home-corner.";
 
-static char WCAtlasHomeSessionCornerStyledKey;
 static NSUInteger WCAtlasHomeSessionCornerDepth;
-static IMP WCAtlasHomeSessionCornerOriginal;
+static IMP WCAtlasHomeSessionCornerOriginalLayout;
+static IMP WCAtlasHomeSessionCornerOriginalBackground;
 static BOOL WCAtlasHomeSessionCornerHooked;
 
 NSString *WCAtlasHomeSessionCornerKey(NSString *name) {
@@ -23,8 +23,15 @@ void WCAtlasInstallHomeSessionCornerDefaults(void) {
     }];
 }
 
-/// The card sits on the page background, so it needs a colour of its own; the gaps then read as
-/// gaps instead of more white.
+static BOOL WCAtlasHomeSessionCornerOn(void) {
+    return [NSUserDefaults.standardUserDefaults boolForKey:WCAtlasHomeSessionCornerKey(@"enabled")];
+}
+
+static CGFloat WCAtlasHomeSessionCornerValue(NSString *name, CGFloat fallback, CGFloat maximum) {
+    NSNumber *number = [NSUserDefaults.standardUserDefaults objectForKey:WCAtlasHomeSessionCornerKey(name)];
+    return number ? MAX(0, MIN(maximum, number.doubleValue)) : fallback;
+}
+
 static UIColor *WCAtlasHomeSessionCornerCardColor(void) {
     return [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
         return traits.userInterfaceStyle == UIUserInterfaceStyleDark
@@ -41,62 +48,86 @@ static UIColor *WCAtlasHomeSessionCornerPageColor(void) {
     }];
 }
 
-static void WCAtlasHomeSessionCornerStyleCell(UITableViewCell *cell) {
-    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    BOOL enabled = [defaults boolForKey:WCAtlasHomeSessionCornerKey(@"enabled")];
-    BOOL styled = objc_getAssociatedObject(cell, &WCAtlasHomeSessionCornerStyledKey) != nil;
-    UIView *content = cell.contentView;
-    if (!enabled) {
-        if (styled) {
-            content.frame = cell.bounds;
-            content.backgroundColor = UIColor.clearColor;
-            content.layer.cornerRadius = 0;
-            content.layer.masksToBounds = NO;
-            cell.backgroundColor = UIColor.clearColor;
-            objc_setAssociatedObject(cell, &WCAtlasHomeSessionCornerStyledKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        }
-        return;
+/// The row content sits four levels under the table: MainFrameItemView, a plain UIView, the cell
+/// content view, the cell, then MainFrameTableView.
+static UIView *WCAtlasHomeSessionCornerFindTable(UIView *view) {
+    for (UIView *candidate = view; candidate; candidate = candidate.superview) {
+        if ([NSStringFromClass(candidate.class) isEqualToString:@"MainFrameTableView"]) return candidate;
     }
-    if (cell.bounds.size.width <= 0) return;
-    CGFloat margin = MAX(0, MIN(24, [defaults doubleForKey:WCAtlasHomeSessionCornerKey(@"margin")]));
-    CGFloat spacing = MAX(0, MIN(16, [defaults doubleForKey:WCAtlasHomeSessionCornerKey(@"spacing")]));
-    CGFloat radius = MAX(0, MIN(40, [defaults doubleForKey:WCAtlasHomeSessionCornerKey(@"radius")]));
-
-    content.frame = CGRectInset(cell.bounds, margin, spacing / 2.0);
-    content.backgroundColor = WCAtlasHomeSessionCornerCardColor();
-    content.layer.cornerCurve = kCACornerCurveContinuous;
-    content.layer.cornerRadius = radius;
-    content.layer.masksToBounds = YES;
-    cell.backgroundColor = UIColor.clearColor;
-    // The table behind the cards is what shows through the gaps. Without it the white cards sit
-    // on white and the rounding is invisible, which is exactly what happened before.
-    cell.superview.backgroundColor = WCAtlasHomeSessionCornerPageColor();
-    objc_setAssociatedObject(cell, &WCAtlasHomeSessionCornerStyledKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return nil;
 }
 
-static void WCAtlasHomeSessionCornerLayoutSubviews(id self, SEL command) {
+static void WCAtlasHomeSessionCornerStyle(UIView *item) {
+    if (!WCAtlasHomeSessionCornerOn()) {
+        item.layer.cornerRadius = 0;
+        item.layer.masksToBounds = NO;
+        item.backgroundColor = UIColor.clearColor;
+        if (item.superview) item.frame = item.superview.bounds;
+        return;
+    }
+    CGFloat radius = WCAtlasHomeSessionCornerValue(@"radius", 12, 40);
+    item.backgroundColor = WCAtlasHomeSessionCornerCardColor();
+    item.layer.cornerCurve = kCACornerCurveContinuous;
+    item.layer.cornerRadius = radius;
+    item.layer.masksToBounds = YES;
+    // The table is what shows through the gaps. White cards on a white table read as no rounding
+    // at all, which is why the first two attempts looked like nothing had happened.
+    UIView *table = WCAtlasHomeSessionCornerFindTable(item);
+    if (table) table.backgroundColor = WCAtlasHomeSessionCornerPageColor();
+}
+
+static void WCAtlasHomeSessionCornerLayoutSubviews(UIView *self, SEL command) {
     if (WCAtlasHomeSessionCornerDepth > 4) return;
     WCAtlasHomeSessionCornerDepth++;
-    if (WCAtlasHomeSessionCornerOriginal) ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginal)(self, command);
-    if ([self isKindOfClass:UITableViewCell.class]) WCAtlasHomeSessionCornerStyleCell((UITableViewCell *)self);
+    // Shrink the row before the original lays its labels out, so they reflow inside the card
+    // instead of assuming the full width of the table.
+    if (WCAtlasHomeSessionCornerOn() && self.superview) {
+        CGFloat margin = WCAtlasHomeSessionCornerValue(@"margin", 8, 24);
+        CGFloat spacing = WCAtlasHomeSessionCornerValue(@"spacing", 6, 16);
+        CGRect host = self.superview.bounds;
+        if (host.size.width > margin * 2 + 40) {
+            self.frame = CGRectInset(host, margin, spacing / 2.0);
+        }
+    }
+    if (WCAtlasHomeSessionCornerOriginalLayout) {
+        ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalLayout)(self, command);
+    }
+    if ([self isKindOfClass:UIView.class]) WCAtlasHomeSessionCornerStyle(self);
     WCAtlasHomeSessionCornerDepth--;
+}
+
+/// WeChat paints the row itself when the highlight changes, so our card colour has to go back on
+/// afterwards or a single tap would flatten it.
+static void WCAtlasHomeSessionCornerBackground(UIView *self, SEL command) {
+    if (WCAtlasHomeSessionCornerOriginalBackground) {
+        ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalBackground)(self, command);
+    }
+    if ([self isKindOfClass:UIView.class]) WCAtlasHomeSessionCornerStyle(self);
+}
+
+static BOOL WCAtlasHomeSessionCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original) {
+    Method method = class_getInstanceMethod(cls, selector);
+    if (!method) return NO;
+    // Copy first: replacing an inherited method would change the superclass instead.
+    class_addMethod(cls, selector, method_getImplementation(method), method_getTypeEncoding(method));
+    method = class_getInstanceMethod(cls, selector);
+    if (!method) return NO;
+    *original = method_getImplementation(method);
+    method_setImplementation(method, replacement);
+    return YES;
 }
 
 NSInteger WCAtlasInstallHomeSessionCorner(void) {
     if (WCAtlasHomeSessionCornerHooked) return 1;
-    // NewMainFrameCell is the conversation row, taken from a view hierarchy dump of the home
-    // page rather than guessed.
-    Class cls = NSClassFromString(@"NewMainFrameCell");
+    Class cls = NSClassFromString(@"MainFrameItemView");
     if (!cls) return 0;
-    SEL selector = @selector(layoutSubviews);
-    Method method = class_getInstanceMethod(cls, selector);
-    if (!method) return 0;
-    // Replace only this class's own implementation; an inherited one would change the superclass.
-    class_addMethod(cls, selector, method_getImplementation(method), method_getTypeEncoding(method));
-    method = class_getInstanceMethod(cls, selector);
-    if (!method) return 0;
-    WCAtlasHomeSessionCornerOriginal = method_getImplementation(method);
-    method_setImplementation(method, (IMP)WCAtlasHomeSessionCornerLayoutSubviews);
+    BOOL laidOut = WCAtlasHomeSessionCornerSwizzle(cls, @selector(layoutSubviews),
+                                                   (IMP)WCAtlasHomeSessionCornerLayoutSubviews,
+                                                   &WCAtlasHomeSessionCornerOriginalLayout);
+    if (!laidOut) return 0;
+    WCAtlasHomeSessionCornerSwizzle(cls, @selector(updateBackgroundColor),
+                                    (IMP)WCAtlasHomeSessionCornerBackground,
+                                    &WCAtlasHomeSessionCornerOriginalBackground);
     WCAtlasHomeSessionCornerHooked = YES;
     return 1;
 }
