@@ -855,14 +855,11 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *d
                                             WCAtlasSettingActionCornerSurfaceRadius)];
         }
     }
-    // Reads out what the runtime actually hooked: a surface only shows up here after its class
-    // was found and its layout method was replaced, so this row is the honest progress report.
-    [surfaces insertObject:WCAtlasItem(@"已识别场景",
-                                       [NSString stringWithFormat:@"%lu / %lu 个；未适配的不会出现在下面",
-                                        (unsigned long)available.count,
-                                        (unsigned long)WCAtlasCornerSurfaceTotalCount()],
-                                       @"checkmark.seal", WCAtlasSettingRowKindInfo, nil, nil, WCAtlasSettingActionNone)
-                   atIndex:0];
+    // Reads out what the runtime actually hooked. A footnote always renders, so the number
+    // cannot silently disappear the way a specialised row kind might.
+    NSString *surfaceFooter = [NSString stringWithFormat:@"已识别 %lu / %lu 个场景；每处界面单独开关，打开后才会出现圆角程度。",
+                               (unsigned long)available.count,
+                               (unsigned long)WCAtlasCornerSurfaceTotalCount()];
 
     NSMutableArray<WCAtlasSettingItem *> *home = [NSMutableArray array];
     WCAtlasAddFeature(home,
@@ -879,7 +876,7 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *d
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-global" title:@"全局圆角"
                                              footer:@"关闭后微信恢复原始样式。" items:global],
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-surfaces" title:@"分场景圆角"
-                                             footer:@"每处界面单独开关；打开后才会出现圆角程度。" items:surfaces],
+                                             footer:surfaceFooter items:surfaces],
     ];
 }
 
