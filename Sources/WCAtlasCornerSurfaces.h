@@ -18,4 +18,8 @@ NSInteger WCAtlasInstallCornerSurfaces(void);
 /// Each dictionary carries `identifier`, `title`, `subtitle` and `icon`.
 NSArray<NSDictionary<NSString *, NSString *> *> *WCAtlasCornerSurfaceDescriptors(void);
 
+/// How many surfaces the table lists at all, adapted or not. Shown next to the adapted count so
+/// the settings page can say what is missing instead of silently hiding it.
+NSUInteger WCAtlasCornerSurfaceTotalCount(void);
+
 NS_ASSUME_NONNULL_END

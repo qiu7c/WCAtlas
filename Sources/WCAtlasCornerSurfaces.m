@@ -186,3 +186,7 @@ NSArray<NSDictionary<NSString *, NSString *> *> *WCAtlasCornerSurfaceDescriptors
     }
     return descriptors;
 }
+
+NSUInteger WCAtlasCornerSurfaceTotalCount(void) {
+    return WCAtlasCornerSurfaceCount;
+}

@@ -838,7 +838,8 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *d
                       defaults, collapsed);
 
     NSMutableArray<WCAtlasSettingItem *> *surfaces = [NSMutableArray array];
-    for (NSDictionary<NSString *, NSString *> *descriptor in WCAtlasCornerSurfaceDescriptors()) {
+    NSArray<NSDictionary<NSString *, NSString *> *> *available = WCAtlasCornerSurfaceDescriptors();
+    for (NSDictionary<NSString *, NSString *> *descriptor in available) {
         NSString *identifier = descriptor[@"identifier"] ?: @"";
         NSString *title = descriptor[@"title"] ?: @"";
         NSString *subtitle = descriptor[@"subtitle"] ?: @"";
@@ -854,6 +855,14 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *d
                                             WCAtlasSettingActionCornerSurfaceRadius)];
         }
     }
+    // Reads out what the runtime actually hooked: a surface only shows up here after its class
+    // was found and its layout method was replaced, so this row is the honest progress report.
+    [surfaces insertObject:WCAtlasItem(@"已识别场景",
+                                       [NSString stringWithFormat:@"%lu / %lu 个；未适配的不会出现在下面",
+                                        (unsigned long)available.count,
+                                        (unsigned long)WCAtlasCornerSurfaceTotalCount()],
+                                       @"checkmark.seal", WCAtlasSettingRowKindInfo, nil, nil, WCAtlasSettingActionNone)
+                   atIndex:0];
 
     NSMutableArray<WCAtlasSettingItem *> *home = [NSMutableArray array];
     WCAtlasAddFeature(home,
