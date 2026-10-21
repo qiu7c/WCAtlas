@@ -42,14 +42,6 @@ static UIColor *WCAtlasHomeSessionCornerCardColor(void) {
     }];
 }
 
-static UIColor *WCAtlasHomeSessionCornerPressedColor(void) {
-    return [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark
-            ? [UIColor colorWithWhite:0.18 alpha:1.0]
-            : [UIColor colorWithWhite:0.93 alpha:1.0];
-    }];
-}
-
 static UIColor *WCAtlasHomeSessionCornerPageColor(void) {
     return [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
         return traits.userInterfaceStyle == UIUserInterfaceStyleDark
@@ -68,140 +60,91 @@ static UITableView *WCAtlasHomeSessionCornerTable(UIView *view) {
 }
 
 static UITableViewCell *WCAtlasHomeSessionCornerCell(UIView *view) {
-    for (UIView *candidate = view.superview; candidate; candidate = candidate.superview) {
+    for (UIView *candidate = view; candidate; candidate = candidate.superview) {
         if ([candidate isKindOfClass:UITableViewCell.class]) return (UITableViewCell *)candidate;
     }
     return nil;
 }
 
-static void WCAtlasHomeSessionCornerClearLayers(UIView *item, UITableViewCell *cell) {
-    // Everything between the card and the table is painted white by WeChat and would cover the
-    // card completely. That is why a row with a real 8pt margin still looked untouched: the
-    // margin was there, the square white content view behind it was just as wide as before.
-    item.superview.backgroundColor = UIColor.clearColor;
+/// The whole list is the card. The reference implementation hangs its home page switch off a
+/// "main frame" setting for exactly this reason: one frame, one corner radius, no per row maths,
+/// so rows cannot end up with gaps, clipped content or a dim that is wider than the card.
+static void WCAtlasHomeSessionCornerStyleList(UITableView *table) {
+    UIView *host = table.superview;
+    if (!host) return;
+    CGFloat margin = WCAtlasHomeSessionCornerValue(@"margin", 8, 24);
+    CGFloat spacing = WCAtlasHomeSessionCornerValue(@"spacing", 6, 16);
+    CGFloat radius = WCAtlasHomeSessionCornerValue(@"radius", 12, 40);
+    CGRect hostBounds = host.bounds;
+    if (hostBounds.size.width <= margin * 2 + 40) return;
+    if (hostBounds.size.height <= spacing + 40) return;
+    table.frame = CGRectMake(hostBounds.origin.x + margin,
+                             hostBounds.origin.y + spacing / 2.0,
+                             hostBounds.size.width - margin * 2,
+                             hostBounds.size.height - spacing);
+    table.backgroundColor = WCAtlasHomeSessionCornerCardColor();
+    table.layer.cornerCurve = kCACornerCurveContinuous;
+    table.layer.cornerRadius = radius;
+    table.layer.masksToBounds = YES;
+    // Behind the card is the page; without a colour there the rounded corners blend into white.
+    host.backgroundColor = WCAtlasHomeSessionCornerPageColor();
+}
+
+static void WCAtlasHomeSessionCornerClearRow(UIView *card, UITableViewCell *cell) {
+    // The rows themselves must stay transparent, otherwise WeChat's white cell background covers
+    // the card and the rounding is invisible again.
+    card.backgroundColor = UIColor.clearColor;
+    if (card.superview) card.superview.backgroundColor = UIColor.clearColor;
     cell.contentView.backgroundColor = UIColor.clearColor;
     cell.backgroundColor = UIColor.clearColor;
     cell.separatorInset = UIEdgeInsetsMake(0, 0, 0, CGFLOAT_MAX);
 }
 
-static void WCAtlasHomeSessionCornerStyle(UIView *item, UITableViewCell *cell, UITableView *table) {
-    CGFloat radius = WCAtlasHomeSessionCornerValue(@"radius", 12, 40);
-    NSIndexPath *indexPath = (cell && table) ? [table indexPathForCell:cell] : nil;
-    // Each section is one card: the rows inside a section sit flush against each other and only
-    // the first and the last one are rounded, so pinned conversations read as their own card and
-    // the rest reads as another. The gap the user sets separates the two cards.
-    NSInteger rows = 1;
-    if (indexPath) {
-        rows = MAX(1, [table numberOfRowsInSection:indexPath.section]);
-    }
-    BOOL first = indexPath != nil && indexPath.row == 0;
-    BOOL last = indexPath != nil && indexPath.row >= rows - 1;
-
-    item.backgroundColor = (cell.isHighlighted || cell.isSelected)
-        ? WCAtlasHomeSessionCornerPressedColor()
-        : WCAtlasHomeSessionCornerCardColor();
-    item.layer.cornerCurve = kCACornerCurveContinuous;
-    item.layer.masksToBounds = YES;
-    if (first && last) {
-        item.layer.cornerRadius = radius;
-        item.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
-    } else if (first) {
-        item.layer.cornerRadius = radius;
-        item.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
-    } else if (last) {
-        item.layer.cornerRadius = radius;
-        item.layer.maskedCorners = kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
-    } else {
-        item.layer.cornerRadius = 0;
-        item.layer.maskedCorners = 0;
-    }
-    if (cell) WCAtlasHomeSessionCornerClearLayers(item, cell);
-    if (table) table.backgroundColor = WCAtlasHomeSessionCornerPageColor();
-}
-
-/// Only the outside of a card gets a gap; rows inside one section stay flush so the card is
-/// continuous instead of turning every conversation into its own island.
-static void WCAtlasHomeSessionCornerInsetCard(UIView *card, UITableViewCell *cell, UITableView *table) {
-    UIView *host = card.superview;
-    if (!host) return;
-    CGFloat margin = WCAtlasHomeSessionCornerValue(@"margin", 8, 24);
-    CGFloat spacing = WCAtlasHomeSessionCornerValue(@"spacing", 6, 16);
-    NSIndexPath *indexPath = (table && cell) ? [table indexPathForCell:cell] : nil;
-    NSInteger rows = indexPath ? MAX(1, [table numberOfRowsInSection:indexPath.section]) : 1;
-    CGFloat top = (indexPath == nil || indexPath.row == 0) ? spacing / 2.0 : 0;
-    CGFloat bottom = (indexPath == nil || indexPath.row >= rows - 1) ? spacing / 2.0 : 0;
-    CGRect hostBounds = host.bounds;
-    // The card is sized from its own parent, never from the table: the table's bounds are the
-    // whole screen, and using them turned every row into a screen tall cell and blanked the page.
-    if (hostBounds.size.width <= margin * 2 + 40) return;
-    if (hostBounds.size.height <= top + bottom + 8) return;
-    card.frame = CGRectMake(hostBounds.origin.x + margin,
-                            hostBounds.origin.y + top,
-                            hostBounds.size.width - margin * 2,
-                            hostBounds.size.height - top - bottom);
+static void WCAtlasHomeSessionCornerApply(UIView *card) {
+    if (!WCAtlasHomeSessionCornerOn()) return;
+    UITableViewCell *cell = WCAtlasHomeSessionCornerCell(card);
+    UITableView *table = WCAtlasHomeSessionCornerTable(card);
+    if (cell) WCAtlasHomeSessionCornerClearRow(card, cell);
+    if (table) WCAtlasHomeSessionCornerStyleList(table);
 }
 
 static void WCAtlasHomeSessionCornerLayoutSubviews(UIView *self, SEL command) {
     if (WCAtlasHomeSessionCornerDepth > 4) return;
     WCAtlasHomeSessionCornerDepth++;
-    UITableViewCell *cell = WCAtlasHomeSessionCornerCell(self);
-    UITableView *table = WCAtlasHomeSessionCornerTable(self);
-    if (WCAtlasHomeSessionCornerOn()) WCAtlasHomeSessionCornerInsetCard(self, cell, table);
     if (WCAtlasHomeSessionCornerOriginalLayout) {
         ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalLayout)(self, command);
     }
-    if ([self isKindOfClass:UIView.class]) WCAtlasHomeSessionCornerStyle(self, cell, table);
+    WCAtlasHomeSessionCornerApply(self);
     WCAtlasHomeSessionCornerDepth--;
 }
 
-/// The row above the conversations ("已登录2台其他设备") is an MFBannerBtn inside a plain
-/// MMTableViewCell rather than a conversation cell, so it needs the same card treatment on its
-/// own class or it stays a full width strip that lines up with nothing.
+/// The row above the conversations ("signed in elsewhere") is an MFBannerBtn inside a plain
+/// MMTableViewCell rather than a conversation cell, so it needs its own hook to stay transparent
+/// and let the same card show through.
 static void WCAtlasHomeSessionCornerBannerLayoutSubviews(UIView *self, SEL command) {
     if (WCAtlasHomeSessionCornerDepth > 4) return;
     WCAtlasHomeSessionCornerDepth++;
-    UITableViewCell *cell = WCAtlasHomeSessionCornerCell(self);
-    UITableView *table = WCAtlasHomeSessionCornerTable(self);
-    if (WCAtlasHomeSessionCornerOn()) WCAtlasHomeSessionCornerInsetCard(self, cell, table);
     if (WCAtlasHomeSessionCornerOriginalBannerLayout) {
         ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalBannerLayout)(self, command);
     }
-    if ([self isKindOfClass:UIView.class]) WCAtlasHomeSessionCornerStyle(self, cell, table);
+    WCAtlasHomeSessionCornerApply(self);
     WCAtlasHomeSessionCornerDepth--;
 }
 
-/// The row has its own highlight entry point for the labels; re-apply the card there so the
-/// pressed colour appears inside the rounded shape instead of a full width dim behind it.
-static void WCAtlasHomeSessionCornerHighlight(UIView *self, SEL command, BOOL highlighted) {
-    if (WCAtlasHomeSessionCornerOriginalHighlight) {
-        ((void (*)(id, SEL, BOOL))WCAtlasHomeSessionCornerOriginalHighlight)(self, command, highlighted);
-    }
-    if (![self isKindOfClass:UIView.class]) return;
-    if (WCAtlasHomeSessionCornerDepth > 4) return;
-    WCAtlasHomeSessionCornerDepth++;
-    UITableViewCell *cell = WCAtlasHomeSessionCornerCell(self);
-    UITableView *table = WCAtlasHomeSessionCornerTable(self);
-    if (WCAtlasHomeSessionCornerOn()) WCAtlasHomeSessionCornerInsetCard(self, cell, table);
-    WCAtlasHomeSessionCornerStyle(self, cell, table);
-    WCAtlasHomeSessionCornerDepth--;
-}
-
-/// WeChat paints the row itself when the highlight changes, so our card colour has to go back on
-/// afterwards or a single tap would flatten it. The same pass also has to re-inset the cell: the
-/// table lays the row out at full width on touch, which is why the pressed state used to dim
-/// wider than the card.
+/// WeChat repaints the row when the highlight changes; the row has to go transparent again or a
+/// single tap restores its white background on top of the card.
 static void WCAtlasHomeSessionCornerBackground(UIView *self, SEL command) {
     if (WCAtlasHomeSessionCornerOriginalBackground) {
         ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalBackground)(self, command);
     }
-    if (![self isKindOfClass:UIView.class]) return;
-    if (WCAtlasHomeSessionCornerDepth > 4) return;
-    WCAtlasHomeSessionCornerDepth++;
-    UITableViewCell *cell = WCAtlasHomeSessionCornerCell(self);
-    UITableView *table = WCAtlasHomeSessionCornerTable(self);
-    if (WCAtlasHomeSessionCornerOn()) WCAtlasHomeSessionCornerInsetCard(self, cell, table);
-    WCAtlasHomeSessionCornerStyle(self, cell, table);
-    WCAtlasHomeSessionCornerDepth--;
+    WCAtlasHomeSessionCornerApply(self);
+}
+
+static void WCAtlasHomeSessionCornerHighlight(UIView *self, SEL command, BOOL highlighted) {
+    if (WCAtlasHomeSessionCornerOriginalHighlight) {
+        ((void (*)(id, SEL, BOOL))WCAtlasHomeSessionCornerOriginalHighlight)(self, command, highlighted);
+    }
+    WCAtlasHomeSessionCornerApply(self);
 }
 
 static BOOL WCAtlasHomeSessionCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original) {
@@ -231,8 +174,8 @@ NSInteger WCAtlasInstallHomeSessionCorner(void) {
     WCAtlasHomeSessionCornerSwizzle(cls, @selector(setLabelHighlighted:),
                                     (IMP)WCAtlasHomeSessionCornerHighlight,
                                     &WCAtlasHomeSessionCornerOriginalHighlight);
-    // The banner row above the list is optional: if WeChat stops shipping it the conversation
-    // cards still work, so a miss here must not fail the whole install.
+    // The banner row is optional: if WeChat stops shipping it the list card still works, so a
+    // miss here must not fail the whole install.
     Class bannerClass = NSClassFromString(@"MFWebMMBtn");
     if (bannerClass) {
         WCAtlasHomeSessionCornerSwizzle(bannerClass, @selector(layoutSubviews),
