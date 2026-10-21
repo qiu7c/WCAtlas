@@ -7,6 +7,13 @@
 
 /// The original implementation, so the hooked controller still lays itself out normally.
 static void (*WCAtlasOriginalViewDidLayoutSubviews)(id, SEL);
+/// Set once the controller hook is really in place. Read by the settings page, because "the
+/// switch does nothing" and "the hook was never installed" look identical from the outside.
+static BOOL WCAtlasCornerLayoutHooked;
+
+BOOL WCAtlasCornerLayoutHookInstalled(void) {
+    return WCAtlasCornerLayoutHooked;
+}
 
 static void WCAtlasReplacementViewDidLayoutSubviews(id self, SEL command) {
     if (WCAtlasOriginalViewDidLayoutSubviews) WCAtlasOriginalViewDidLayoutSubviews(self, command);
@@ -22,30 +29,50 @@ static void WCAtlasReplacementViewDidLayoutSubviews(id self, SEL command) {
     WCAtlasHomeCornerApplyToController(self);
 }
 
-static void WCAtlasInstallCornerHook(void) {
-    Method method = class_getInstanceMethod(UIViewController.class, @selector(viewDidLayoutSubviews));
-    if (!method) return;
+/// Returns NO while UIKit is not there yet, so the caller can try again.
+static BOOL WCAtlasInstallCornerHook(void) {
+    if (WCAtlasCornerLayoutHooked) return YES;
+    Class controllerClass = NSClassFromString(@"UIViewController");
+    if (!controllerClass) return NO;
+    Method method = class_getInstanceMethod(controllerClass, @selector(viewDidLayoutSubviews));
+    if (!method) return NO;
     WCAtlasOriginalViewDidLayoutSubviews = (void (*)(id, SEL))method_getImplementation(method);
     method_setImplementation(method, (IMP)WCAtlasReplacementViewDidLayoutSubviews);
+    WCAtlasCornerLayoutHooked = YES;
+    return YES;
 }
 
 static void WCAtlasCornerSetup(void) {
     WCAtlasInstallGlobalCornerDefaults();
     WCAtlasInstallCornerSurfaceDefaults();
     WCAtlasInstallHomeCornerDefaults();
-    WCAtlasInstallCornerHook();
     WCAtlasInstallCornerSurfaces();
     WCAtlasInstallHomeCorner();
 }
 
+/// A constructor can run before UIKit is loaded, and the first version simply gave up in that
+/// case, which left the whole feature switched off while the settings page still looked fine.
+/// This keeps knocking until the class exists, then installs the rest once.
+static void WCAtlasCornerRetry(NSInteger attemptsLeft) {
+    if (WCAtlasInstallCornerHook()) {
+        WCAtlasInstallCornerSurfaces();
+        WCAtlasInstallHomeCorner();
+        return;
+    }
+    if (attemptsLeft <= 0) return;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        WCAtlasCornerRetry(attemptsLeft - 1);
+    });
+}
+
 __attribute__((constructor)) static void WCAtlasCornerBootstrap(void) {
-    // UIViewController lives in UIKit, which may not be loaded when the dylib is linked in.
-    // Hopping to the main queue also keeps the swizzle off the loader thread.
+    WCAtlasCornerSetup();
     if (NSThread.isMainThread) {
-        WCAtlasCornerSetup();
+        WCAtlasCornerRetry(100);
         return;
     }
     dispatch_async(dispatch_get_main_queue(), ^{
-        WCAtlasCornerSetup();
+        WCAtlasCornerRetry(100);
     });
 }

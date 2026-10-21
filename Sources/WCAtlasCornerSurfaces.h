@@ -22,4 +22,8 @@ NSArray<NSDictionary<NSString *, NSString *> *> *WCAtlasCornerSurfaceDescriptors
 /// the settings page can say what is missing instead of silently hiding it.
 NSUInteger WCAtlasCornerSurfaceTotalCount(void);
 
+/// Whether the controller layout hook is really in place. Without it nothing applies at all,
+/// and the settings page has no other way to tell that apart from a style that draws nothing.
+BOOL WCAtlasCornerLayoutHookInstalled(void);
+
 NS_ASSUME_NONNULL_END

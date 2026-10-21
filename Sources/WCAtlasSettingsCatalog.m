@@ -857,9 +857,10 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *d
     }
     // Reads out what the runtime actually hooked. A footnote always renders, so the number
     // cannot silently disappear the way a specialised row kind might.
-    NSString *surfaceFooter = [NSString stringWithFormat:@"已识别 %lu / %lu 个场景；每处界面单独开关，打开后才会出现圆角程度。",
+    NSString *surfaceFooter = [NSString stringWithFormat:@"已识别 %lu / %lu 个场景；布局钩子%@。每处界面单独开关。",
                                (unsigned long)available.count,
-                               (unsigned long)WCAtlasCornerSurfaceTotalCount()];
+                               (unsigned long)WCAtlasCornerSurfaceTotalCount(),
+                               WCAtlasCornerLayoutHookInstalled() ? @"已安装" : @"未安装"];
 
     NSMutableArray<WCAtlasSettingItem *> *home = [NSMutableArray array];
     WCAtlasAddFeature(home,
