@@ -55,6 +55,7 @@
         case WCAtlasSettingsCategoryEnhancements: return @"常用增强";
         case WCAtlasSettingsCategoryInterface: return @"界面优化";
         case WCAtlasSettingsCategoryPlugin: return @"插件设置";
+        case WCAtlasSettingsCategoryCorner: return @"圆角设置";
         case WCAtlasSettingsCategoryVirtualLocation: return @"虚拟定位";
         case WCAtlasSettingsCategoryRoot:
         default: return @"WCAtlas";
@@ -470,6 +471,7 @@
         case WCAtlasSettingActionOpenInterface: [self openCategory:WCAtlasSettingsCategoryInterface]; break;
         case WCAtlasSettingActionOpenPlugin: [self openCategory:WCAtlasSettingsCategoryPlugin]; break;
         case WCAtlasSettingActionOpenVirtualLocation: [self openCategory:WCAtlasSettingsCategoryVirtualLocation]; break;
+        case WCAtlasSettingActionOpenCorner: [self openCategory:WCAtlasSettingsCategoryCorner]; break;
         default: [self.actions performActionForItem:item]; break;
     }
 }

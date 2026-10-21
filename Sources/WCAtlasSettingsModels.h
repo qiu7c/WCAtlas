@@ -11,6 +11,7 @@ typedef NS_ENUM(NSInteger, WCAtlasSettingsCategory) {
     WCAtlasSettingsCategoryInterface,
     WCAtlasSettingsCategoryPlugin,
     WCAtlasSettingsCategoryVirtualLocation,
+    WCAtlasSettingsCategoryCorner,
 };
 
 typedef NS_ENUM(NSInteger, WCAtlasSettingRowKind) {
@@ -74,6 +75,7 @@ typedef NS_ENUM(NSInteger, WCAtlasSettingAction) {
     WCAtlasSettingActionReplySwipeTriggerDistance,
     WCAtlasSettingActionGlobalAvatarCornerPercent,
     WCAtlasSettingActionHomeCornerValue,
+    WCAtlasSettingActionOpenCorner,
     WCAtlasSettingActionQuickReplyLibrary,
     WCAtlasSettingActionSendConfirmationConversations,
     WCAtlasSettingActionSendConfirmationPauseDuration,
