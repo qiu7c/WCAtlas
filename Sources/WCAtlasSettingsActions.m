@@ -6,7 +6,6 @@
 #import "WCAtlasConfigManagerViewController.h"
 #import "WCAtlasLogViewController.h"
 #import "WCAtlasEnhancements.h"
-#import "WCAtlasGlobalCorner.h"
 #import "WCAtlasInterfaceTweaks.h"
 #import "WCAtlasListEditorViewController.h"
 #import "WCAtlasLongPressMenuViewController.h"
@@ -736,20 +735,6 @@ static char WCAtlasContactSearchLogicKey;
         case WCAtlasSettingActionRevokeFilter: [self presentRevokeFilterPicker]; break;
         case WCAtlasSettingActionRevokeLocalTemplate: [self presentTemplateWithTitle:item.title key:WCAtlasAntiRevokeLocalTemplateKey defaultValue:@"拦截到一条{用户名}撤回的消息\n发送时间：{yyyy}-{MM}-{dd} {HH}:{mm}:{ss}\n内容：{内容}"]; break;
         case WCAtlasSettingActionRevokeReplyTemplate: [self presentTemplateWithTitle:item.title key:WCAtlasAntiRevokeReplyTemplateKey defaultValue:@"【捕捉到一条撤回消息】\n操作用户：{用户名}\n发送时间：{yyyy}-{MM}-{dd} {HH}:{mm}:{ss}\n撤回内容：{内容}\n\n撤回无效，消息已保存"]; break;
-        case WCAtlasSettingActionGlobalCornerRadius: [self presentNumberEditorWithTitle:item.title message:@"请输入 0 到 40 之间的圆角半径；0 表示关闭" key:WCAtlasGlobalCornerRadiusKey minimum:0 maximum:40 notifyChange:YES applyScale:NO]; break;
-        case WCAtlasSettingActionGlobalCornerStroke: [self presentNumberEditorWithTitle:item.title message:@"请输入 0 到 3 之间的描边宽度；0 表示无描边" key:WCAtlasGlobalCornerStrokeKey minimum:0 maximum:3 notifyChange:YES applyScale:NO]; break;
-        case WCAtlasSettingActionCornerSurfaceRadius: {
-            NSString *radiusKey = item.defaultsKey;
-            if (!radiusKey) break;
-            [self presentNumberEditorWithTitle:item.title
-                                       message:@"请输入 0 到 40 之间的圆角程度；0 表示关闭"
-                                           key:radiusKey
-                                       minimum:0
-                                       maximum:40
-                                  notifyChange:YES
-                                     applyScale:NO];
-            break;
-        }
         case WCAtlasSettingActionGlobalScale: [self presentNumberEditorWithTitle:item.title message:@"请输入 70 到 100 之间的百分比" key:WCAtlasPageScaleGlobalPercentKey minimum:70 maximum:100 notifyChange:YES applyScale:NO]; break;
         case WCAtlasSettingActionSettingsScale: [self presentNumberEditorWithTitle:item.title message:@"请输入 70 到 100 之间的百分比" key:WCAtlasSettingsPageScalePercentKey minimum:70 maximum:100 notifyChange:YES applyScale:YES]; break;
         case WCAtlasSettingActionInnerRadius: [self presentNumberEditorWithTitle:item.title message:@"请输入 0 到 40 之间的数值；0 表示直角" key:WCAtlasChatInputInnerRadiusKey minimum:0 maximum:40 notifyChange:NO applyScale:NO]; break;

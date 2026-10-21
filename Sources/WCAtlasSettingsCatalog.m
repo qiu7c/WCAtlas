@@ -1,9 +1,6 @@
 #import "WCAtlasSettingsCatalog.h"
 #import "WCAtlasAntiRevoke.h"
 #import "WCAtlasEnhancements.h"
-#import "WCAtlasGlobalCorner.h"
-#import "WCAtlasCornerSurfaces.h"
-#import "WCAtlasHomeCorner.h"
 #import "WCAtlasInterfaceTweaks.h"
 #import "WCAtlasLogging.h"
 #import "WCAtlasQuickReplyStore.h"
@@ -741,11 +738,6 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasInterfaceSections(NSUserDefaults
                                                      footer:@"关闭对应开关后恢复微信原始界面。" items:disabled]];
     }
     return @[
-        [WCAtlasSettingSection sectionWithIdentifier:@"corner-entry" title:@"圆角"
-                                             footer:@"全局圆角与分场景圆角都收在独立页面里。"
-                                               items:@[
-            WCAtlasItem(@"圆角设置", @"全局圆角、分场景开关与圆角程度", @"app.dashed", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenCorner),
-        ]],
         [WCAtlasSettingSection sectionWithIdentifier:@"display" title:@"显示" footer:@"关闭后恢复微信原始样式。" items:display],
         [WCAtlasSettingSection sectionWithIdentifier:@"navigation" title:@"返回按钮"
                                              footer:@"只作用于 WCAtlas 自己的页面，微信原始页面不受影响。"
@@ -829,58 +821,6 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasVirtualLocationSections(void) {
     ];
 }
 
-static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *defaults, NSSet<NSString *> *collapsed) {
-    NSMutableArray<WCAtlasSettingItem *> *global = [NSMutableArray array];
-    WCAtlasAddFeature(global,
-                      WCAtlasItem(@"全局圆角", @"给整个页面套一层卡片圆角，使用连续曲线", @"rectangle.roundedtop", WCAtlasSettingRowKindSwitch, WCAtlasGlobalCornerEnabledKey, nil, WCAtlasSettingActionNone),
-                      @[ WCAtlasItem(@"圆角半径", @"输入 0 到 40；0 表示关闭", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, nil, [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasGlobalCornerRadiusKey]], WCAtlasSettingActionGlobalCornerRadius),
-                         WCAtlasItem(@"描边宽度", @"输入 0 到 3；0 表示无描边", @"rectangle.inset.filled", WCAtlasSettingRowKindDetail, nil, [NSString stringWithFormat:@"%.1f", [defaults doubleForKey:WCAtlasGlobalCornerStrokeKey]], WCAtlasSettingActionGlobalCornerStroke) ],
-                      defaults, collapsed);
-
-    NSMutableArray<WCAtlasSettingItem *> *surfaces = [NSMutableArray array];
-    NSArray<NSDictionary<NSString *, NSString *> *> *available = WCAtlasCornerSurfaceDescriptors();
-    for (NSDictionary<NSString *, NSString *> *descriptor in available) {
-        NSString *identifier = descriptor[@"identifier"] ?: @"";
-        NSString *title = descriptor[@"title"] ?: @"";
-        NSString *subtitle = descriptor[@"subtitle"] ?: @"";
-        NSString *icon = descriptor[@"icon"] ?: @"";
-        BOOL enabled = [defaults boolForKey:WCAtlasCornerKey(identifier, @"enabled")];
-        [surfaces addObject:WCAtlasItem(title, subtitle, icon, WCAtlasSettingRowKindSwitch,
-                                        WCAtlasCornerKey(identifier, @"enabled"), nil, WCAtlasSettingActionNone)];
-        if (enabled) {
-            NSString *radiusKey = WCAtlasCornerKey(identifier, @"radius");
-            [surfaces addObject:WCAtlasItem(@"圆角程度", @"输入 0 到 40；0 表示关闭", @"slider.horizontal.3",
-                                            WCAtlasSettingRowKindDetail, radiusKey,
-                                            [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:radiusKey]],
-                                            WCAtlasSettingActionCornerSurfaceRadius)];
-        }
-    }
-    // Reads out what the runtime actually hooked. A footnote always renders, so the number
-    // cannot silently disappear the way a specialised row kind might.
-    NSString *surfaceFooter = [NSString stringWithFormat:@"已识别 %lu / %lu 个场景；布局钩子%@。每处界面单独开关。",
-                               (unsigned long)available.count,
-                               (unsigned long)WCAtlasCornerSurfaceTotalCount(),
-                               WCAtlasCornerLayoutHookInstalled() ? @"已安装" : @"未安装"];
-
-    NSMutableArray<WCAtlasSettingItem *> *home = [NSMutableArray array];
-    WCAtlasAddFeature(home,
-                      WCAtlasItem(@"首页会话列表", @"每条会话变成一张独立卡片", @"house", WCAtlasSettingRowKindSwitch, WCAtlasHomeCornerKey(@"enabled"), nil, WCAtlasSettingActionNone),
-                      @[ WCAtlasItem(@"圆角半径", @"输入 0 到 40；0 表示关闭", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, WCAtlasHomeCornerKey(@"radius"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasHomeCornerKey(@"radius")]], WCAtlasSettingActionCornerSurfaceRadius),
-                         WCAtlasItem(@"左右边距", @"卡片距屏幕两侧的距离", @"arrow.left.and.right", WCAtlasSettingRowKindDetail, WCAtlasHomeCornerKey(@"margin"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasHomeCornerKey(@"margin")]], WCAtlasSettingActionCornerSurfaceRadius),
-                         WCAtlasItem(@"上下间距", @"两行卡片之间的空隙", @"arrow.up.and.down", WCAtlasSettingRowKindDetail, WCAtlasHomeCornerKey(@"spacing"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasHomeCornerKey(@"spacing")]], WCAtlasSettingActionCornerSurfaceRadius),
-                         WCAtlasItem(@"描边宽度", @"输入 0 到 3；0 表示无描边", @"rectangle.inset.filled", WCAtlasSettingRowKindDetail, WCAtlasHomeCornerKey(@"stroke"), [NSString stringWithFormat:@"%.1f", [defaults doubleForKey:WCAtlasHomeCornerKey(@"stroke")]], WCAtlasSettingActionCornerSurfaceRadius) ],
-                      defaults, collapsed);
-
-    return @[
-        [WCAtlasSettingSection sectionWithIdentifier:@"corner-home" title:@"首页"
-                                             footer:@"先只改会话列表；开关打开后下面四项才生效。" items:home],
-        [WCAtlasSettingSection sectionWithIdentifier:@"corner-global" title:@"全局圆角"
-                                             footer:@"关闭后微信恢复原始样式。" items:global],
-        [WCAtlasSettingSection sectionWithIdentifier:@"corner-surfaces" title:@"分场景圆角"
-                                             footer:surfaceFooter items:surfaces],
-    ];
-}
-
 NSArray<WCAtlasSettingSection *> *WCAtlasSettingsBuildSections(WCAtlasSettingsCategory category,
                                                            NSSet<NSString *> *collapsedFeatureKeys) {
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
@@ -890,7 +830,6 @@ NSArray<WCAtlasSettingSection *> *WCAtlasSettingsBuildSections(WCAtlasSettingsCa
         case WCAtlasSettingsCategoryMoments: return WCAtlasEnhancementSections(defaults, collapsed, YES);
         case WCAtlasSettingsCategoryInterfaceDisabled: return WCAtlasInterfaceSections(defaults, collapsed, YES);
         case WCAtlasSettingsCategoryEnhancements: return WCAtlasEnhancementSections(defaults, collapsed, NO);
-        case WCAtlasSettingsCategoryCorner: return WCAtlasCornerSections(defaults, collapsed);
         case WCAtlasSettingsCategoryInterface: return WCAtlasInterfaceSections(defaults, collapsed, NO);
         case WCAtlasSettingsCategoryPlugin: return WCAtlasPluginSections(defaults);
         case WCAtlasSettingsCategoryVirtualLocation: return WCAtlasVirtualLocationSections();
