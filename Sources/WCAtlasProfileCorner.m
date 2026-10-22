@@ -91,10 +91,9 @@ static void WCAtlasProfileCornerStyleCell(UITableViewCell *cell, CGFloat radius,
     UIEdgeInsets inset = UIEdgeInsetsMake(0, 0, 0, CGFLOAT_MAX);
     if (!UIEdgeInsetsEqualToEdgeInsets(cell.separatorInset, inset)) cell.separatorInset = inset;
 
-    CGRect bounds = card.bounds;
-    if (bounds.size.width <= margin * 2 + 40) return;
-    CGRect target = CGRectMake(margin, 0, bounds.size.width - margin * 2, bounds.size.height);
-    if (!CGRectEqualToRect(card.frame, target)) card.frame = target;
+    // Only paint here. Resizing the content view from the controller's layout pass made the table
+    // lay out again on every frame, which is why the page crawled.
+    (void)margin;
     if (card.backgroundColor != WCAtlasProfileCornerCardColor()) {
         card.backgroundColor = WCAtlasProfileCornerCardColor();
     }

@@ -36,18 +36,6 @@ static CGFloat WCAtlasHomeSessionCornerValue(NSString *name, CGFloat fallback, C
     return number ? MAX(0, MIN(maximum, number.doubleValue)) : fallback;
 }
 
-static UIColor *WCAtlasHomeSessionCornerCardColor(void) {
-    static UIColor *color;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        color = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
-            return traits.userInterfaceStyle == UIUserInterfaceStyleDark
-                ? [UIColor colorWithWhite:0.11 alpha:1.0]
-                : UIColor.whiteColor;
-        }];
-    });
-    return color;
-}
 
 static UIColor *WCAtlasHomeSessionCornerPageColor(void) {
     static UIColor *color;
@@ -81,28 +69,44 @@ static UITableViewCell *WCAtlasHomeSessionCornerCell(UIView *view) {
 /// The whole list is the card. The reference implementation hangs its home page switch off a
 /// "main frame" setting for exactly this reason: one frame, one corner radius, no per row maths,
 /// so rows cannot end up with gaps, clipped content or a dim that is wider than the card.
+static char WCAtlasHomeSessionCornerMaskKey;
+
+/// The reference implementation masks the scroll view instead of resizing it: applyScrollCornerMask
+/// and tableCornerOutsets in that package say as much. A mask clips the list at the top and the
+/// bottom so the card ends where the screen ends, and because no frame changes the pull to refresh
+/// gesture and the table's own layout both keep working.
 static void WCAtlasHomeSessionCornerStyleList(UITableView *table) {
     UIView *host = table.superview;
     if (!host) return;
     CGFloat margin = WCAtlasHomeSessionCornerValue(@"margin", 8, 24);
     CGFloat spacing = WCAtlasHomeSessionCornerValue(@"spacing", 6, 16);
     CGFloat radius = WCAtlasHomeSessionCornerValue(@"radius", 12, 40);
-    CGRect hostBounds = host.bounds;
-    if (hostBounds.size.width <= margin * 2 + 40) return;
-    if (hostBounds.size.height <= spacing + 40) return;
-    CGRect target = CGRectMake(hostBounds.origin.x + margin,
-                               hostBounds.origin.y + spacing / 2.0,
-                               hostBounds.size.width - margin * 2,
-                               hostBounds.size.height - spacing);
-    // Writing the frame unconditionally re-entered the table's own layout on every scroll tick,
-    // which is what made the card shiver while scrolling. Only touch it when it really differs.
-    if (!CGRectEqualToRect(table.frame, target)) table.frame = target;
-    table.backgroundColor = WCAtlasHomeSessionCornerCardColor();
-    table.layer.cornerCurve = kCACornerCurveContinuous;
-    table.layer.cornerRadius = radius;
-    table.layer.masksToBounds = YES;
-    // Behind the card is the page; without a colour there the rounded corners blend into white.
-    host.backgroundColor = WCAtlasHomeSessionCornerPageColor();
+    if (radius <= 0) radius = 12;
+    CGRect bounds = table.bounds;
+    if (bounds.size.width <= margin * 2 + 40) return;
+    if (bounds.size.height <= spacing + 40) return;
+    CGRect rect = CGRectMake(bounds.origin.x + margin,
+                             bounds.origin.y + spacing / 2.0,
+                             bounds.size.width - margin * 2,
+                             bounds.size.height - spacing);
+    CAShapeLayer *mask = objc_getAssociatedObject(table, &WCAtlasHomeSessionCornerMaskKey);
+    if (![mask isKindOfClass:CAShapeLayer.class]) {
+        mask = [CAShapeLayer layer];
+        objc_setAssociatedObject(table, &WCAtlasHomeSessionCornerMaskKey, mask, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    // Only rebuild when the shape would actually change, so this never becomes a layout feedback
+    // loop while scrolling.
+    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:radius];
+    if (!CGPathEqualToPath(mask.path, path.CGPath)) {
+        mask.path = path.CGPath;
+    }
+    if (table.layer.mask != mask) table.layer.mask = mask;
+    // Everything inside the mask has to be transparent, otherwise WeChat's own white row
+    // backgrounds hide the card and the corners.
+    if (table.backgroundColor != UIColor.clearColor) table.backgroundColor = UIColor.clearColor;
+    if (host.backgroundColor != WCAtlasHomeSessionCornerPageColor()) {
+        host.backgroundColor = WCAtlasHomeSessionCornerPageColor();
+    }
 }
 
 static void WCAtlasHomeSessionCornerClearRow(UIView *card, UITableViewCell *cell) {
