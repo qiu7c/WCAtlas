@@ -11,6 +11,7 @@ static IMP WCAtlasHomeSessionCornerOriginalBannerLayout;
 static IMP WCAtlasHomeSessionCornerOriginalBackground;
 static IMP WCAtlasHomeSessionCornerOriginalHighlight;
 static IMP WCAtlasHomeSessionCornerOriginalTableLayout;
+static void WCAtlasHomeSessionCornerTableLayout(UIView *self, SEL command);
 static BOOL WCAtlasHomeSessionCornerHooked;
 
 NSString *WCAtlasHomeSessionCornerKey(NSString *name) {
