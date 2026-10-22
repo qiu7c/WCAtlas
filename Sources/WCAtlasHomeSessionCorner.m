@@ -104,6 +104,7 @@ static void WCAtlasHomeSessionCornerStyleList(UITableView *table) {
     // Everything inside the mask has to be transparent, otherwise WeChat's own white row
     // backgrounds hide the card and the corners.
     if (table.backgroundColor != UIColor.clearColor) table.backgroundColor = UIColor.clearColor;
+    WCAtlasHomeSessionCornerUpdateGap(table, spacing);
     if (host.backgroundColor != WCAtlasHomeSessionCornerPageColor()) {
         host.backgroundColor = WCAtlasHomeSessionCornerPageColor();
     }
@@ -121,11 +122,100 @@ static void WCAtlasHomeSessionCornerClearRow(UIView *card, UITableViewCell *cell
     if (!UIEdgeInsetsEqualToEdgeInsets(cell.separatorInset, inset)) cell.separatorInset = inset;
 }
 
+/// The mask only clips, so the avatar and the labels would keep their old offsets and get cut on
+/// the left. Insetting the item itself moves the whole row inward, and because its frame comes from
+/// its own parent's bounds the value is stable: the same rect is computed every pass.
+static void WCAtlasHomeSessionCornerInsetItem(UIView *item) {
+    UIView *host = item.superview;
+    if (!host) return;
+    CGFloat margin = WCAtlasHomeSessionCornerValue(@"margin", 8, 24);
+    CGRect hostBounds = host.bounds;
+    if (hostBounds.size.width <= margin * 2 + 40) return;
+    CGRect target = CGRectMake(hostBounds.origin.x + margin, hostBounds.origin.y,
+                               hostBounds.size.width - margin * 2, hostBounds.size.height);
+    if (!CGRectEqualToRect(item.frame, target)) item.frame = target;
+}
+/// The pinned flag lives on the session behind the row data, not on the row itself: the existing
+/// private API helper reads m_bIsTop and m_uTopTime for the same reason.
+static BOOL WCAtlasHomeSessionCornerIsPinned(UIView *item) {
+    id cellData = nil;
+    @try {
+        cellData = [item valueForKey:@"m_cellData"];
+    } @catch (__unused NSException *exception) {
+        return NO;
+    }
+    if (!cellData) return NO;
+    for (NSString *sessionKey in @[@"session", @"sessionInfo", @"m_session"]) {
+        id session = nil;
+        @try {
+            session = [cellData valueForKey:sessionKey];
+        } @catch (__unused NSException *exception) {
+            session = nil;
+        }
+        if (!session) continue;
+        for (NSString *key in @[@"m_bIsTop", @"m_uTopTime"]) {
+            id value = nil;
+            @try {
+                value = [session valueForKey:key];
+            } @catch (__unused NSException *exception) {
+                value = nil;
+            }
+            if ([value respondsToSelector:@selector(boolValue)] && [value boolValue]) return YES;
+        }
+    }
+    return NO;
+}
+
+static char WCAtlasHomeSessionCornerGapKey;
+
+/// A page coloured band drawn over the boundary, so the pinned block and the rest read as two
+/// cards. It is an added view with its own frame, so nothing that already exists is laid out again.
+static void WCAtlasHomeSessionCornerUpdateGap(UITableView *table, CGFloat gap) {
+    UIView *band = objc_getAssociatedObject(table, &WCAtlasHomeSessionCornerGapKey);
+    if (![band isKindOfClass:UIView.class]) {
+        band = [UIView new];
+        band.userInteractionEnabled = NO;
+        objc_setAssociatedObject(table, &WCAtlasHomeSessionCornerGapKey, band, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [table addSubview:band];
+    }
+    band.backgroundColor = WCAtlasHomeSessionCornerPageColor();
+    CGFloat boundary = -1;
+    CGFloat lastPinnedBottom = -1;
+    CGFloat firstNormalTop = -1;
+    for (UITableViewCell *cell in table.visibleCells) {
+        UIView *item = nil;
+        for (UIView *child in cell.contentView.subviews) {
+            if ([NSStringFromClass(child.class) isEqualToString:@"MainFrameItemView"]) { item = child; break; }
+        }
+        if (!item) continue;
+        BOOL pinned = WCAtlasHomeSessionCornerIsPinned(item);
+        CGRect frame = [item convertRect:item.bounds toView:table];
+        if (pinned) {
+            lastPinnedBottom = MAX(lastPinnedBottom, CGRectGetMaxY(frame));
+        } else if (firstNormalTop < 0) {
+            firstNormalTop = CGRectGetMinY(frame);
+        }
+    }
+    if (lastPinnedBottom >= 0 && firstNormalTop >= 0) boundary = (lastPinnedBottom + firstNormalTop) / 2.0;
+    if (boundary < 0 || gap <= 0) {
+        band.hidden = YES;
+        return;
+    }
+    band.hidden = NO;
+    CGRect target = CGRectMake(table.bounds.origin.x, boundary - gap / 2.0,
+                               table.bounds.size.width, gap);
+    if (!CGRectEqualToRect(band.frame, target)) band.frame = target;
+    if (band.superview != table) [table addSubview:band];
+}
 static void WCAtlasHomeSessionCornerApply(UIView *card) {
     if (!WCAtlasHomeSessionCornerOn()) return;
     UITableViewCell *cell = WCAtlasHomeSessionCornerCell(card);
     UITableView *table = WCAtlasHomeSessionCornerTable(card);
     if (cell) WCAtlasHomeSessionCornerClearRow(card, cell);
+    // Pinned rows are painted grey by WeChat; the card wants them white like any other row.
+    if (WCAtlasHomeSessionCornerIsPinned(card)) card.backgroundColor = UIColor.whiteColor;
+    WCAtlasHomeSessionCornerInsetItem(card);
+    if (WCAtlasHomeSessionCornerIsPinned(card)) card.backgroundColor = UIColor.whiteColor;
     if (table) WCAtlasHomeSessionCornerStyleList(table);
 }
 

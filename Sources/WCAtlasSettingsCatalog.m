@@ -787,8 +787,8 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *d
 
     return @[
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-avatar" title:@"头像" footer:nil items:avatar],
-        [WCAtlasSettingSection sectionWithIdentifier:@"corner-home" title:@"首页会话" footer:@"打开后首页每条会话变成一张圆角卡片，三项参数可以微调。" items:home],
-        [WCAtlasSettingSection sectionWithIdentifier:@"corner-moments" title:@"朋友圈图片" footer:nil items:momentsImages],
+        [WCAtlasSettingSection sectionWithIdentifier:@"corner-home" title:@"首页会话" footer:nil items:home],
+        [WCAtlasSettingSection sectionWithIdentifier:@"corner-moments" title:@"朋友圈" footer:nil items:momentsImages],
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-profile" title:@"资料页" footer:nil items:profile],
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-input" title:@"聊天输入栏" footer:nil items:chatInput],
     ];
