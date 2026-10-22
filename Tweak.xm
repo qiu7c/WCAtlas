@@ -4979,8 +4979,22 @@ static BOOL WCAtlasTriggerNativeMomentsComment(WCOperateFloatView *floatView) {
     UIControl *commentButton = nil;
     WCAtlasMomentsNativeFloatControls(floatView, nil, &commentButton);
     if (![commentButton isKindOfClass:[UIControl class]]) return NO;
-    [commentButton sendActionsForControlEvents:UIControlEventTouchUpInside];
-    return YES;
+    // 8.0.79 handles these menu items with a tap block instead of target/action, so
+    // sendActionsForControlEvents: lands on nothing and the menu just stays open. Prefer the real
+    // action when it exists, then fall back to the block WeChat stores on the button.
+    if (commentButton.allTargets.count > 0) {
+        [commentButton sendActionsForControlEvents:UIControlEventTouchUpInside];
+        return YES;
+    }
+    SEL blockSelector = NSSelectorFromString(@"touchDownBlock");
+    if ([commentButton respondsToSelector:blockSelector]) {
+        id block = ((id (*)(id, SEL))objc_msgSend)(commentButton, blockSelector);
+        if (block) {
+            ((void (^)(void))block)();
+            return YES;
+        }
+    }
+    return NO;
 }
 
 static NSDateFormatter *WCAtlasMomentsPreciseDateFormatter(void) {

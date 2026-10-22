@@ -3,6 +3,8 @@
 #import "WCAtlasEnhancements.h"
 #import "WCAtlasInterfaceTweaks.h"
 #import "WCAtlasHomeSessionCorner.h"
+#import "WCAtlasMomentsImageCorner.h"
+#import "WCAtlasProfileCorner.h"
 #import "WCAtlasLogging.h"
 #import "WCAtlasQuickReplyStore.h"
 #import "WCAtlasMessageBlock.h"
@@ -768,9 +770,26 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *d
                       WCAtlasItem(@"聊天输入栏圆角", @"分别控制输入框与外部工具栏", @"rectangle.roundedtop", WCAtlasSettingRowKindSwitch, WCAtlasChatInputRoundingEnabledKey, nil, WCAtlasSettingActionNone),
                       chatChildren, defaults, collapsed);
 
+    NSMutableArray<WCAtlasSettingItem *> *momentsImages = [NSMutableArray array];
+    WCAtlasAddFeature(momentsImages,
+                      WCAtlasItem(@"朋友圈图片圆角", @"朋友圈里的图片统一改成圆角", @"photo.on.rectangle", WCAtlasSettingRowKindSwitch, WCAtlasMomentsImageCornerKey(@"enabled"), nil, WCAtlasSettingActionNone),
+                      @[ WCAtlasItem(@"圆角程度", @"输入 0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, WCAtlasMomentsImageCornerKey(@"radius"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasMomentsImageCornerKey(@"radius")]], WCAtlasSettingActionHomeCornerValue) ],
+                      defaults, collapsed);
+
+    NSMutableArray<WCAtlasSettingItem *> *profile = [NSMutableArray array];
+    WCAtlasAddFeature(profile,
+                      WCAtlasItem(@"资料页圆角", @"好友与自己的资料页行改成圆角卡片", @"person.crop.rectangle", WCAtlasSettingRowKindSwitch, WCAtlasProfileCornerKey(@"enabled"), nil, WCAtlasSettingActionNone),
+                      @[
+                          WCAtlasItem(@"圆角程度", @"输入 0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, WCAtlasProfileCornerKey(@"radius"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasProfileCornerKey(@"radius")]], WCAtlasSettingActionHomeCornerValue),
+                          WCAtlasItem(@"左右边距", @"输入 0 到 32", @"arrow.left.and.right", WCAtlasSettingRowKindDetail, WCAtlasProfileCornerKey(@"margin"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasProfileCornerKey(@"margin")]], WCAtlasSettingActionHomeCornerValue),
+                      ],
+                      defaults, collapsed);
+
     return @[
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-avatar" title:@"头像" footer:nil items:avatar],
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-home" title:@"首页会话" footer:@"打开后首页每条会话变成一张圆角卡片，三项参数可以微调。" items:home],
+        [WCAtlasSettingSection sectionWithIdentifier:@"corner-moments" title:@"朋友圈图片" footer:nil items:momentsImages],
+        [WCAtlasSettingSection sectionWithIdentifier:@"corner-profile" title:@"资料页" footer:nil items:profile],
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-input" title:@"聊天输入栏" footer:nil items:chatInput],
     ];
 }

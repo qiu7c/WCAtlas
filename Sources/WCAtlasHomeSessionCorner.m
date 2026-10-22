@@ -35,19 +35,29 @@ static CGFloat WCAtlasHomeSessionCornerValue(NSString *name, CGFloat fallback, C
 }
 
 static UIColor *WCAtlasHomeSessionCornerCardColor(void) {
-    return [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark
-            ? [UIColor colorWithWhite:0.11 alpha:1.0]
-            : UIColor.whiteColor;
-    }];
+    static UIColor *color;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        color = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
+            return traits.userInterfaceStyle == UIUserInterfaceStyleDark
+                ? [UIColor colorWithWhite:0.11 alpha:1.0]
+                : UIColor.whiteColor;
+        }];
+    });
+    return color;
 }
 
 static UIColor *WCAtlasHomeSessionCornerPageColor(void) {
-    return [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark
-            ? [UIColor colorWithWhite:0.04 alpha:1.0]
-            : [UIColor colorWithWhite:0.95 alpha:1.0];
-    }];
+    static UIColor *color;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        color = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
+            return traits.userInterfaceStyle == UIUserInterfaceStyleDark
+                ? [UIColor colorWithWhite:0.04 alpha:1.0]
+                : [UIColor colorWithWhite:0.95 alpha:1.0];
+        }];
+    });
+    return color;
 }
 
 /// The row content sits four levels under the table: MainFrameItemView, a plain UIView, the cell
@@ -78,10 +88,13 @@ static void WCAtlasHomeSessionCornerStyleList(UITableView *table) {
     CGRect hostBounds = host.bounds;
     if (hostBounds.size.width <= margin * 2 + 40) return;
     if (hostBounds.size.height <= spacing + 40) return;
-    table.frame = CGRectMake(hostBounds.origin.x + margin,
-                             hostBounds.origin.y + spacing / 2.0,
-                             hostBounds.size.width - margin * 2,
-                             hostBounds.size.height - spacing);
+    CGRect target = CGRectMake(hostBounds.origin.x + margin,
+                               hostBounds.origin.y + spacing / 2.0,
+                               hostBounds.size.width - margin * 2,
+                               hostBounds.size.height - spacing);
+    // Writing the frame unconditionally re-entered the table's own layout on every scroll tick,
+    // which is what made the card shiver while scrolling. Only touch it when it really differs.
+    if (!CGRectEqualToRect(table.frame, target)) table.frame = target;
     table.backgroundColor = WCAtlasHomeSessionCornerCardColor();
     table.layer.cornerCurve = kCACornerCurveContinuous;
     table.layer.cornerRadius = radius;
@@ -97,7 +110,9 @@ static void WCAtlasHomeSessionCornerClearRow(UIView *card, UITableViewCell *cell
     if (card.superview) card.superview.backgroundColor = UIColor.clearColor;
     cell.contentView.backgroundColor = UIColor.clearColor;
     cell.backgroundColor = UIColor.clearColor;
-    cell.separatorInset = UIEdgeInsetsMake(0, 0, 0, CGFLOAT_MAX);
+    // Setting the inset invalidates the cell's layout, so only do it when it would change.
+    UIEdgeInsets inset = UIEdgeInsetsMake(0, 0, 0, CGFLOAT_MAX);
+    if (!UIEdgeInsetsEqualToEdgeInsets(cell.separatorInset, inset)) cell.separatorInset = inset;
 }
 
 static void WCAtlasHomeSessionCornerApply(UIView *card) {
