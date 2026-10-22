@@ -13,6 +13,8 @@ static IMP WCAtlasHomeSessionCornerOriginalHighlight;
 static IMP WCAtlasHomeSessionCornerOriginalTableLayout;
 static void WCAtlasHomeSessionCornerTableLayout(UIView *self, SEL command);
 static BOOL WCAtlasHomeSessionCornerHooked;
+static char WCAtlasHomeSessionCornerPinnedKey;
+
 
 static void WCAtlasHomeSessionCornerUpdateGap(UITableView *table, CGFloat gap);
 static BOOL WCAtlasHomeSessionCornerIsPinned(UIView *item);
@@ -178,7 +180,6 @@ static BOOL WCAtlasHomeSessionCornerIsPinned(UIView *item) {
 }
 
 static char WCAtlasHomeSessionCornerGapKey;
-static char WCAtlasHomeSessionCornerPinnedKey;
 
 /// A page coloured band drawn over the boundary, so the pinned block and the rest read as two
 /// cards. It is an added view with its own frame, so nothing that already exists is laid out again.
