@@ -147,6 +147,8 @@ static void WCAtlasHomeSessionCornerInsetItem(UIView *item) {
 /// The pinned flag lives on the session behind the row data, not on the row itself: the existing
 /// private API helper reads m_bIsTop and m_uTopTime for the same reason.
 static BOOL WCAtlasHomeSessionCornerIsPinned(UIView *item) {
+    // WeChat paints the pinned block grey; that difference is the signal we can always read.
+    if ([objc_getAssociatedObject(item, &WCAtlasHomeSessionCornerPinnedKey) boolValue]) return YES;
     id cellData = nil;
     @try {
         cellData = [item valueForKey:@"m_cellData"];
@@ -176,6 +178,7 @@ static BOOL WCAtlasHomeSessionCornerIsPinned(UIView *item) {
 }
 
 static char WCAtlasHomeSessionCornerGapKey;
+static char WCAtlasHomeSessionCornerPinnedKey;
 
 /// A page coloured band drawn over the boundary, so the pinned block and the rest read as two
 /// cards. It is an added view with its own frame, so nothing that already exists is laid out again.
@@ -241,6 +244,12 @@ static void WCAtlasHomeSessionCornerLayoutSubviews(UIView *self, SEL command) {
         ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalLayout)(self, command);
     }
     WCAtlasHomeSessionCornerApply(self);
+    // The inset changes the width, but WeChat already laid the labels out for the old one,
+    // which is why the time label hung over the right edge until a later pass. Running its own
+    // layout once more settles every label inside the new width immediately.
+    if (WCAtlasHomeSessionCornerOriginalLayout) {
+        ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalLayout)(self, command);
+    }
     WCAtlasHomeSessionCornerDepth--;
 }
 
@@ -260,6 +269,13 @@ static void WCAtlasHomeSessionCornerBannerLayoutSubviews(UIView *self, SEL comma
 /// WeChat repaints the row when the highlight changes; the row has to go transparent again or a
 /// single tap restores its white background on top of the card.
 static void WCAtlasHomeSessionCornerBackground(UIView *self, SEL command) {
+    UIColor *native = self.backgroundColor;
+    if (native && native != UIColor.whiteColor && native != UIColor.clearColor) {
+        CGFloat white = 0, alpha = 0;
+        if ([native getWhite:&white alpha:&alpha] && white > 0.5 && white < 0.995) {
+            objc_setAssociatedObject(self, &WCAtlasHomeSessionCornerPinnedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+    }
     if (WCAtlasHomeSessionCornerOriginalBackground) {
         ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalBackground)(self, command);
     }
