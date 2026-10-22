@@ -183,9 +183,15 @@ static void WCAtlasHomeSessionCornerUpdateGap(UITableView *table, CGFloat gap) {
     CGFloat lastPinnedBottom = -1;
     CGFloat firstNormalTop = -1;
     for (UITableViewCell *cell in table.visibleCells) {
+        // The row content sits one plain UIView below the content view, so a direct child scan
+        // never found it and the band was never placed.
         UIView *item = nil;
-        for (UIView *child in cell.contentView.subviews) {
-            if ([NSStringFromClass(child.class) isEqualToString:@"MainFrameItemView"]) { item = child; break; }
+        NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:cell.contentView];
+        while (queue.count > 0 && !item) {
+            UIView *view = queue.lastObject;
+            [queue removeLastObject];
+            if ([NSStringFromClass(view.class) isEqualToString:@"MainFrameItemView"]) { item = view; break; }
+            for (UIView *child in view.subviews) [queue addObject:child];
         }
         if (!item) continue;
         BOOL pinned = WCAtlasHomeSessionCornerIsPinned(item);
