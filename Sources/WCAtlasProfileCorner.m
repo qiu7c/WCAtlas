@@ -71,6 +71,17 @@ static UITableView *WCAtlasProfileCornerTable(UIView *root) {
     return nil;
 }
 
+static void WCAtlasProfileCornerRoundPictures(UIView *view, CGFloat radius, NSInteger depth) {
+    if (!view || depth > 4) return;
+    NSString *name = NSStringFromClass(view.class);
+    if ([name isEqualToString:@"WCImageView"] || [name isEqualToString:@"MMWebImageView"]) {
+        if (view.layer.cornerRadius != radius) view.layer.cornerRadius = radius;
+        if (view.layer.cornerCurve != kCACornerCurveContinuous) view.layer.cornerCurve = kCACornerCurveContinuous;
+        if (!view.layer.masksToBounds) view.layer.masksToBounds = YES;
+    }
+    for (UIView *child in view.subviews) WCAtlasProfileCornerRoundPictures(child, radius, depth + 1);
+}
+
 static void WCAtlasProfileCornerStyleCell(UITableViewCell *cell, CGFloat radius, CGFloat margin) {
     UIView *card = cell.contentView;
     if (!card) return;
@@ -90,6 +101,8 @@ static void WCAtlasProfileCornerStyleCell(UITableViewCell *cell, CGFloat radius,
     if (card.layer.cornerRadius != radius) card.layer.cornerRadius = radius;
     if (card.layer.cornerCurve != kCACornerCurveContinuous) card.layer.cornerCurve = kCACornerCurveContinuous;
     if (!card.layer.masksToBounds) card.layer.masksToBounds = YES;
+    // The moments preview inside the profile row uses the same picture class as the feed.
+    WCAtlasProfileCornerRoundPictures(card, radius, 0);
 }
 
 static void WCAtlasProfileCornerApply(UIViewController *controller) {

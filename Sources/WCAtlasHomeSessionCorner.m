@@ -10,6 +10,7 @@ static IMP WCAtlasHomeSessionCornerOriginalLayout;
 static IMP WCAtlasHomeSessionCornerOriginalBannerLayout;
 static IMP WCAtlasHomeSessionCornerOriginalBackground;
 static IMP WCAtlasHomeSessionCornerOriginalHighlight;
+static IMP WCAtlasHomeSessionCornerOriginalTableLayout;
 static BOOL WCAtlasHomeSessionCornerHooked;
 
 NSString *WCAtlasHomeSessionCornerKey(NSString *name) {
@@ -197,10 +198,29 @@ NSInteger WCAtlasInstallHomeSessionCorner(void) {
                                         (IMP)WCAtlasHomeSessionCornerBannerLayoutSubviews,
                                         &WCAtlasHomeSessionCornerOriginalBannerLayout);
     }
+    Class tableClass = NSClassFromString(@"MainFrameTableView");
+    if (tableClass) {
+        WCAtlasHomeSessionCornerSwizzle(tableClass, @selector(layoutSubviews),
+                                        (IMP)WCAtlasHomeSessionCornerTableLayout,
+                                        &WCAtlasHomeSessionCornerOriginalTableLayout);
+    }
     WCAtlasHomeSessionCornerHooked = YES;
     return 1;
 }
 
+/// Scrolling to the top makes the table re-lay itself out on its own (the refresh control changes
+/// the content inset), and that pass used to drop our frame. Hooking the table keeps the card in
+/// place without waiting for a row to lay out again.
+static void WCAtlasHomeSessionCornerTableLayout(UIView *self, SEL command) {
+    if (WCAtlasHomeSessionCornerOriginalTableLayout) {
+        ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalTableLayout)(self, command);
+    }
+    if (!WCAtlasHomeSessionCornerOn()) return;
+    if (WCAtlasHomeSessionCornerDepth > 4) return;
+    WCAtlasHomeSessionCornerDepth++;
+    WCAtlasHomeSessionCornerStyleList((UITableView *)self);
+    WCAtlasHomeSessionCornerDepth--;
+}
 /// The row class only exists once WeChat's own image is loaded, so keep knocking instead of
 /// giving up on the first try the way the constructor-time code did before.
 static void WCAtlasHomeSessionCornerRetry(NSInteger attemptsLeft) {

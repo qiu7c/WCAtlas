@@ -35,9 +35,18 @@ static CGFloat WCAtlasMomentsImageCornerRadius(void) {
 /// others would change the design rather than the pictures.
 static BOOL WCAtlasMomentsImageCornerIsPicture(UIView *view) {
     NSString *name = NSStringFromClass(view.class);
-    return [name isEqualToString:@"WCImageView"] ||
-           [name isEqualToString:@"MMWebImageView"] ||
-           [name isEqualToString:@"MMImgFullScreenImageView"];
+    if ([name isEqualToString:@"WCImageView"] ||
+        [name isEqualToString:@"MMWebImageView"] ||
+        [name isEqualToString:@"MMImgFullScreenImageView"]) return YES;
+    // A video feed uses a different branch: the picture is a plain UIImageView inside
+    // WCSNSNodeVideoView, and the player sits next to it. Rounding the container clips both, which
+    // is what makes the preview and the running video share the same corners.
+    if ([name isEqualToString:@"WCSNSNodeVideoView"] ||
+        [name isEqualToString:@"WCPlayerView"] ||
+        [name isEqualToString:@"WCPlayerLayerView"]) return YES;
+    // Every media flavour is wrapped in one of these templates (grid, video, ...), so matching the
+    // prefix keeps pictures covered without listing each template that ships later.
+    return [name hasPrefix:@"WCContentItemViewTemplate"];
 }
 
 static void WCAtlasMomentsImageCornerStyle(UIView *view, CGFloat radius) {
