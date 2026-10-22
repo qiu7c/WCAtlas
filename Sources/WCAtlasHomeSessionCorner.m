@@ -14,6 +14,15 @@ static IMP WCAtlasHomeSessionCornerOriginalTableLayout;
 static void WCAtlasHomeSessionCornerTableLayout(UIView *self, SEL command);
 static BOOL WCAtlasHomeSessionCornerHooked;
 
+static void WCAtlasHomeSessionCornerUpdateGap(UITableView *table, CGFloat gap);
+static BOOL WCAtlasHomeSessionCornerIsPinned(UIView *item);
+static void WCAtlasHomeSessionCornerInsetItem(UIView *item);
+static void WCAtlasHomeSessionCornerStyleList(UITableView *table);
+static void WCAtlasHomeSessionCornerClearRow(UIView *card, UITableViewCell *cell);
+static UITableView *WCAtlasHomeSessionCornerTable(UIView *view);
+static UITableViewCell *WCAtlasHomeSessionCornerCell(UIView *view);
+static CGFloat WCAtlasHomeSessionCornerValue(NSString *name, CGFloat fallback, CGFloat maximum);
+static void WCAtlasHomeSessionCornerApply(UIView *card);
 NSString *WCAtlasHomeSessionCornerKey(NSString *name) {
     return [WCAtlasHomeSessionCornerPrefix stringByAppendingString:name];
 }
