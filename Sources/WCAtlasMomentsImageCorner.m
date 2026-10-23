@@ -42,6 +42,18 @@ static BOOL WCAtlasMomentsImageCornerIsPicture(UIView *view) {
     // A mosaic thumbnail is one picture made of several pieces: rounding the pieces would leave
     // gaps between them, so the container itself is rounded and its pieces are clipped by it.
     if ([name isEqualToString:@"WCPuzzleImageView"]) return YES;
+    // A shared video channel feed is one rounded card holding the cover and the play badge.
+    if ([name isEqualToString:@"WCContentItemFinderView"]) return YES;
+    // The video channel row on a profile is five plain UIImageViews inside its entrance view, not
+    // WCImageViews, so they are matched here. The size guard leaves the avatars and the little
+    // badges alone: only the thumbnails are big enough.
+    if ([name isEqualToString:@"UIImageView"]) {
+        if (view.bounds.size.width < 40 || view.bounds.size.height < 40) return NO;
+        for (UIView *parent = view.superview; parent; parent = parent.superview) {
+            if ([NSStringFromClass(parent.class) isEqualToString:@"WCFinderWXContactEntranceView"]) return YES;
+        }
+        return NO;
+    }
     // A video feed uses a different branch: the picture is a plain UIImageView inside
     // WCSNSNodeVideoView, and the player sits next to it. Rounding the container clips both, which
     // is what makes the preview and the running video share the same corners.
@@ -52,6 +64,14 @@ static BOOL WCAtlasMomentsImageCornerIsPicture(UIView *view) {
     // holds text, so rounding it put a second, much bigger corner behind the picture and made a
     // shared song cover look squashed. Only the picture and the video views are rounded.
     return NO;
+}
+
+/// A text only entry is a grey block with no picture inside, so there is nothing for the picture
+/// walk to find. The block itself is rounded instead, which is what makes the two lines read as one
+/// card rather than a pair of grey strips.
+static BOOL WCAtlasMomentsImageCornerIsTextBlock(UIView *view) {
+    NSString *name = NSStringFromClass(view.class);
+    return [name isEqualToString:@"WCListTextCellView"];
 }
 
 static void WCAtlasMomentsImageCornerStyle(UIView *view, CGFloat radius) {
@@ -74,6 +94,7 @@ static void WCAtlasMomentsImageCornerStyle(UIView *view, CGFloat radius) {
 
 static void WCAtlasMomentsImageCornerWalk(UIView *view, CGFloat radius, NSInteger depth) {
     if (!view || depth > 6) return;
+    if (WCAtlasMomentsImageCornerIsTextBlock(view)) WCAtlasMomentsImageCornerStyle(view, radius);
     if (WCAtlasMomentsImageCornerIsPicture(view)) WCAtlasMomentsImageCornerStyle(view, radius);
     for (UIView *child in view.subviews) {
         WCAtlasMomentsImageCornerWalk(child, radius, depth + 1);
@@ -182,11 +203,57 @@ static void WCAtlasMomentsImageCornerInstallProfileTable(void) {
 }
 
 
+
+static IMP WCAtlasMomentsImageCornerOriginalTextCell;
+static void WCAtlasMomentsImageCornerLayoutTextCell(UIView *self, SEL command) {
+    if (WCAtlasMomentsImageCornerDepth > 4) return;
+    WCAtlasMomentsImageCornerDepth++;
+    if (WCAtlasMomentsImageCornerOriginalTextCell) {
+        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalTextCell)(self, command);
+    }
+    if (WCAtlasMomentsImageCornerOn()) {
+        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
+    }
+    WCAtlasMomentsImageCornerDepth--;
+}
+
+static void WCAtlasMomentsImageCornerInstallTextCell(void) {
+    Class cls = NSClassFromString(@"WCListTextCellView");
+    if (!cls) return;
+    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
+                                     (IMP)WCAtlasMomentsImageCornerLayoutTextCell,
+                                     &WCAtlasMomentsImageCornerOriginalTextCell);
+}
+
+
+static IMP WCAtlasMomentsImageCornerOriginalGridTemplate;
+static void WCAtlasMomentsImageCornerLayoutGridTemplate(UIView *self, SEL command) {
+    if (WCAtlasMomentsImageCornerDepth > 4) return;
+    WCAtlasMomentsImageCornerDepth++;
+    if (WCAtlasMomentsImageCornerOriginalGridTemplate) {
+        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalGridTemplate)(self, command);
+    }
+    if (WCAtlasMomentsImageCornerOn()) {
+        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
+    }
+    WCAtlasMomentsImageCornerDepth--;
+}
+
+static void WCAtlasMomentsImageCornerInstallGridTemplate(void) {
+    Class cls = NSClassFromString(@"WCContentItemViewTemplateGrid");
+    if (!cls) return;
+    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
+                                     (IMP)WCAtlasMomentsImageCornerLayoutGridTemplate,
+                                     &WCAtlasMomentsImageCornerOriginalGridTemplate);
+}
+
 static void WCAtlasMomentsImageCornerInstallPages(void) {
     WCAtlasMomentsImageCornerInstallPhotoCell();
     WCAtlasMomentsImageCornerInstallSightCell();
     WCAtlasMomentsImageCornerInstallHybridCell();
     WCAtlasMomentsImageCornerInstallProfileTable();
+    WCAtlasMomentsImageCornerInstallTextCell();
+    WCAtlasMomentsImageCornerInstallGridTemplate();
 }
 
 static BOOL WCAtlasMomentsImageCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original) {

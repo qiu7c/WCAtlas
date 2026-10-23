@@ -2,7 +2,6 @@
 #import "WCAtlasAntiRevoke.h"
 #import "WCAtlasEnhancements.h"
 #import "WCAtlasInterfaceTweaks.h"
-#import "WCAtlasHomeSessionCorner.h"
 #import "WCAtlasMomentsImageCorner.h"
 #import "WCAtlasProfileCorner.h"
 #import "WCAtlasLogging.h"
@@ -308,7 +307,7 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasRootSections(void) {
             WCAtlasItem(@"聊天增强", @"消息、编辑、提醒与导出", @"bubble.left.and.bubble.right", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenMessages),
             WCAtlasItem(@"朋友圈增强", @"提醒、互动、发布和媒体操作", @"photo.on.rectangle.angled", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenMoments),
             WCAtlasItem(@"界面禁用", @"隐藏不需要的界面元素和广告", @"eye.slash", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenInterfaceDisabled),
-            WCAtlasItem(@"界面优化", @"头像、胶囊、缩放与输入栏样式", @"paintbrush", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenInterface),
+            WCAtlasItem(@"界面优化", @"头像、圆角与输入栏", @"paintbrush", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenInterface),
             WCAtlasItem(@"常用增强", @"自动化、扫码、资料和本地显示", @"bolt", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenEnhancements),
             WCAtlasItem(@"虚拟定位", @"发送位置、实时共享与朋友圈定位", @"location.fill", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenVirtualLocation),
             WCAtlasItem(@"插件设置", @"通知样式、日志、配置与插件入口", @"gearshape.2", WCAtlasSettingRowKindDetail, nil, nil, WCAtlasSettingActionOpenPlugin),
@@ -738,56 +737,47 @@ static NSArray<WCAtlasSettingSection *> *WCAtlasInterfaceSections(NSUserDefaults
 static NSArray<WCAtlasSettingSection *> *WCAtlasCornerSections(NSUserDefaults *defaults, NSSet<NSString *> *collapsed) {
     NSMutableArray<WCAtlasSettingItem *> *avatar = [NSMutableArray array];
     WCAtlasAddFeature(avatar,
-                      WCAtlasItem(@"全局头像圆角", @"统一调整微信头像组件的圆角", @"person.crop.square", WCAtlasSettingRowKindSwitch, WCAtlasGlobalAvatarRoundingEnabledKey, nil, WCAtlasSettingActionNone),
-                      @[ WCAtlasItem(@"头像圆角程度", @"0% 为直角，100% 为圆形", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, nil,
+                      WCAtlasItem(@"全局头像圆角", @"统一微信头像的圆角", @"person.crop.square", WCAtlasSettingRowKindSwitch, WCAtlasGlobalAvatarRoundingEnabledKey, nil, WCAtlasSettingActionNone),
+                      @[ WCAtlasItem(@"圆角程度", @"0% 直角，100% 圆形", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, nil,
                                      [NSString stringWithFormat:@"%.0f%%", [defaults doubleForKey:WCAtlasGlobalAvatarCornerPercentKey]],
                                      WCAtlasSettingActionGlobalAvatarCornerPercent) ],
                       defaults, collapsed);
 
-    NSMutableArray<WCAtlasSettingItem *> *home = [NSMutableArray array];
-    WCAtlasAddFeature(home,
-                      WCAtlasItem(@"首页会话圆角", @"每条会话变成一张独立卡片", @"rectangle.roundedtop", WCAtlasSettingRowKindSwitch, WCAtlasHomeSessionCornerKey(@"enabled"), nil, WCAtlasSettingActionNone),
-                      @[ WCAtlasItem(@"圆角半径", @"输入 0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, WCAtlasHomeSessionCornerKey(@"radius"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasHomeSessionCornerKey(@"radius")]], WCAtlasSettingActionHomeCornerValue),
-                         WCAtlasItem(@"左右边距", @"卡片距屏幕两侧的距离", @"arrow.left.and.right", WCAtlasSettingRowKindDetail, WCAtlasHomeSessionCornerKey(@"margin"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasHomeSessionCornerKey(@"margin")]], WCAtlasSettingActionHomeCornerValue),
-                         WCAtlasItem(@"上下间距", @"相邻两张卡片之间的空隙", @"arrow.up.and.down", WCAtlasSettingRowKindDetail, WCAtlasHomeSessionCornerKey(@"spacing"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasHomeSessionCornerKey(@"spacing")]], WCAtlasSettingActionHomeCornerValue) ],
-                      defaults, collapsed);
-
     NSMutableArray<WCAtlasSettingItem *> *chatChildren = [NSMutableArray array];
-    WCAtlasSettingItem *inner = WCAtlasItem(@"输入框内部圆角", @"调整文字输入区域", @"text.cursor", WCAtlasSettingRowKindSwitch, WCAtlasChatInputInnerRoundingKey, nil, WCAtlasSettingActionNone);
+    WCAtlasSettingItem *inner = WCAtlasItem(@"输入框内部圆角", @"文字输入区域", @"text.cursor", WCAtlasSettingRowKindSwitch, WCAtlasChatInputInnerRoundingKey, nil, WCAtlasSettingActionNone);
     inner.hasChildren = YES;
     [chatChildren addObject:inner];
     if ([defaults boolForKey:WCAtlasChatInputInnerRoundingKey] && ![collapsed containsObject:WCAtlasChatInputInnerRoundingKey]) {
-        [chatChildren addObject:WCAtlasItem(@"内部圆角程度", @"输入 0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, nil, [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasChatInputInnerRadiusKey]], WCAtlasSettingActionInnerRadius)];
+        [chatChildren addObject:WCAtlasItem(@"内部圆角程度", @"0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, nil, [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasChatInputInnerRadiusKey]], WCAtlasSettingActionInnerRadius)];
     }
-    WCAtlasSettingItem *outer = WCAtlasItem(@"外部工具栏圆角", @"调整聊天底部工具栏", @"rectangle.bottomhalf.filled", WCAtlasSettingRowKindSwitch, WCAtlasChatInputOuterRoundingKey, nil, WCAtlasSettingActionNone);
+    WCAtlasSettingItem *outer = WCAtlasItem(@"外部工具栏圆角", @"聊天底部工具栏", @"rectangle.bottomhalf.filled", WCAtlasSettingRowKindSwitch, WCAtlasChatInputOuterRoundingKey, nil, WCAtlasSettingActionNone);
     outer.hasChildren = YES;
     [chatChildren addObject:outer];
     if ([defaults boolForKey:WCAtlasChatInputOuterRoundingKey] && ![collapsed containsObject:WCAtlasChatInputOuterRoundingKey]) {
-        [chatChildren addObject:WCAtlasItem(@"外部圆角程度", @"输入 0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, nil, [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasChatInputOuterRadiusKey]], WCAtlasSettingActionOuterRadius)];
+        [chatChildren addObject:WCAtlasItem(@"外部圆角程度", @"0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, nil, [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasChatInputOuterRadiusKey]], WCAtlasSettingActionOuterRadius)];
     }
     NSMutableArray<WCAtlasSettingItem *> *chatInput = [NSMutableArray array];
     WCAtlasAddFeature(chatInput,
-                      WCAtlasItem(@"聊天输入栏圆角", @"分别控制输入框与外部工具栏", @"rectangle.roundedtop", WCAtlasSettingRowKindSwitch, WCAtlasChatInputRoundingEnabledKey, nil, WCAtlasSettingActionNone),
+                      WCAtlasItem(@"聊天输入栏圆角", @"输入框与底部工具栏", @"rectangle.roundedtop", WCAtlasSettingRowKindSwitch, WCAtlasChatInputRoundingEnabledKey, nil, WCAtlasSettingActionNone),
                       chatChildren, defaults, collapsed);
 
     NSMutableArray<WCAtlasSettingItem *> *momentsImages = [NSMutableArray array];
     WCAtlasAddFeature(momentsImages,
-                      WCAtlasItem(@"朋友圈图片圆角", @"朋友圈里的图片统一改成圆角", @"photo.on.rectangle", WCAtlasSettingRowKindSwitch, WCAtlasMomentsImageCornerKey(@"enabled"), nil, WCAtlasSettingActionNone),
-                      @[ WCAtlasItem(@"圆角程度", @"输入 0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, WCAtlasMomentsImageCornerKey(@"radius"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasMomentsImageCornerKey(@"radius")]], WCAtlasSettingActionHomeCornerValue) ],
+                      WCAtlasItem(@"朋友圈图片圆角", @"朋友圈和我的朋友圈", @"photo.on.rectangle", WCAtlasSettingRowKindSwitch, WCAtlasMomentsImageCornerKey(@"enabled"), nil, WCAtlasSettingActionNone),
+                      @[ WCAtlasItem(@"圆角程度", @"0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, WCAtlasMomentsImageCornerKey(@"radius"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasMomentsImageCornerKey(@"radius")]], WCAtlasSettingActionHomeCornerValue) ],
                       defaults, collapsed);
 
     NSMutableArray<WCAtlasSettingItem *> *profile = [NSMutableArray array];
     WCAtlasAddFeature(profile,
                       WCAtlasItem(@"资料页圆角", @"好友与自己的资料页行改成圆角卡片", @"person.crop.rectangle", WCAtlasSettingRowKindSwitch, WCAtlasProfileCornerKey(@"enabled"), nil, WCAtlasSettingActionNone),
                       @[
-                          WCAtlasItem(@"圆角程度", @"输入 0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, WCAtlasProfileCornerKey(@"radius"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasProfileCornerKey(@"radius")]], WCAtlasSettingActionHomeCornerValue),
+                          WCAtlasItem(@"圆角程度", @"0 到 40", @"slider.horizontal.3", WCAtlasSettingRowKindDetail, WCAtlasProfileCornerKey(@"radius"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasProfileCornerKey(@"radius")]], WCAtlasSettingActionHomeCornerValue),
                           WCAtlasItem(@"左右边距", @"输入 0 到 32", @"arrow.left.and.right", WCAtlasSettingRowKindDetail, WCAtlasProfileCornerKey(@"margin"), [NSString stringWithFormat:@"%.0f", [defaults doubleForKey:WCAtlasProfileCornerKey(@"margin")]], WCAtlasSettingActionHomeCornerValue),
                       ],
                       defaults, collapsed);
 
     return @[
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-avatar" title:@"头像" footer:nil items:avatar],
-        [WCAtlasSettingSection sectionWithIdentifier:@"corner-home" title:@"首页会话" footer:nil items:home],
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-moments" title:@"朋友圈" footer:nil items:momentsImages],
         [WCAtlasSettingSection sectionWithIdentifier:@"corner-input" title:@"聊天输入栏" footer:nil items:chatInput],
     ];
