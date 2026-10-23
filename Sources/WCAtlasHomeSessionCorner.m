@@ -12,6 +12,7 @@ static IMP WCAtlasCornerOriginalHighlight;
 static BOOL WCAtlasCornerHooked;
 static NSUInteger WCAtlasCornerDepth;
 static BOOL WCAtlasCornerFrameChanged;
+static char WCAtlasCornerBackdropKey;
 
 // Every helper is declared here so where its definition sits can never break the build again.
 NSString *WCAtlasHomeSessionCornerKey(NSString *name);
@@ -24,6 +25,7 @@ static UITableViewCell *WCAtlasCornerCell(UIView *view);
 static void WCAtlasCornerClearRow(UIView *item, UITableViewCell *cell);
 static void WCAtlasCornerInsetItem(UIView *item);
 static void WCAtlasCornerPaintTable(UITableView *table);
+static void WCAtlasCornerInstallBackdrop(UITableView *table);
 static void WCAtlasCornerApply(UIView *item);
 static BOOL WCAtlasCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original);
 
@@ -113,6 +115,26 @@ static void WCAtlasCornerPaintTable(UITableView *table) {
     }
 }
 
+/// The page behind the list is white in WeChat, so a white card on a white page showed no margin at
+/// all. A backdrop view of the page colour is placed under the table, which is a colour change only
+/// and never touches the table's size or shape.
+static void WCAtlasCornerInstallBackdrop(UITableView *table) {
+    UIView *host = table.superview;
+    if (!host) return;
+    UIView *backdrop = objc_getAssociatedObject(table, &WCAtlasCornerBackdropKey);
+    if (![backdrop isKindOfClass:UIView.class]) {
+        backdrop = [UIView new];
+        backdrop.userInteractionEnabled = NO;
+        backdrop.backgroundColor = WCAtlasCornerPageColor();
+        objc_setAssociatedObject(table, &WCAtlasCornerBackdropKey, backdrop, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [host insertSubview:backdrop belowSubview:table];
+    }
+    if (backdrop.superview != host) [host insertSubview:backdrop belowSubview:table];
+    CGRect target = table.frame;
+    if (!CGRectEqualToRect(backdrop.frame, target)) backdrop.frame = target;
+    if (backdrop.backgroundColor != WCAtlasCornerPageColor()) backdrop.backgroundColor = WCAtlasCornerPageColor();
+}
+
 static void WCAtlasCornerApply(UIView *item) {
     if (!WCAtlasCornerOn()) return;
     UITableViewCell *cell = WCAtlasCornerCell(item);
@@ -145,6 +167,7 @@ static void WCAtlasCornerApply(UIView *item) {
     if (layer.masksToBounds != wantsClip) layer.masksToBounds = wantsClip;
 
     WCAtlasCornerInsetItem(item);
+    WCAtlasCornerInstallBackdrop(table);
     WCAtlasCornerPaintTable(table);
 }
 

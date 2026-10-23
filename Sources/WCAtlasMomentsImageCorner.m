@@ -38,6 +38,9 @@ static BOOL WCAtlasMomentsImageCornerIsPicture(UIView *view) {
     if ([name isEqualToString:@"WCImageView"] ||
         [name isEqualToString:@"MMWebImageView"] ||
         [name isEqualToString:@"MMImgFullScreenImageView"]) return YES;
+    // A mosaic thumbnail is one picture made of several pieces: rounding the pieces would leave
+    // gaps between them, so the container itself is rounded and its pieces are clipped by it.
+    if ([name isEqualToString:@"WCPuzzleImageView"]) return YES;
     // A video feed uses a different branch: the picture is a plain UIImageView inside
     // WCSNSNodeVideoView, and the player sits next to it. Rounding the container clips both, which
     // is what makes the preview and the running video share the same corners.
