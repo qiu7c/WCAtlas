@@ -5,26 +5,26 @@
 
 static NSString *const WCAtlasHomeSessionCornerPrefix = @"com.qiu7c.wcatlas.home-corner.";
 
-static NSUInteger WCAtlasHomeSessionCornerDepth;
-static IMP WCAtlasHomeSessionCornerOriginalLayout;
-static IMP WCAtlasHomeSessionCornerOriginalBannerLayout;
-static IMP WCAtlasHomeSessionCornerOriginalBackground;
-static IMP WCAtlasHomeSessionCornerOriginalHighlight;
-static IMP WCAtlasHomeSessionCornerOriginalTableLayout;
-static void WCAtlasHomeSessionCornerTableLayout(UIView *self, SEL command);
-static BOOL WCAtlasHomeSessionCornerHooked;
-static char WCAtlasHomeSessionCornerPinnedKey;
+static IMP WCAtlasCornerOriginalItemLayout;
+static IMP WCAtlasCornerOriginalItemBackground;
+static IMP WCAtlasCornerOriginalTableLayout;
+static BOOL WCAtlasCornerHooked;
+static NSUInteger WCAtlasCornerDepth;
 
+// Every helper is declared here so where its definition sits can never break the build again.
+NSString *WCAtlasHomeSessionCornerKey(NSString *name);
+void WCAtlasInstallHomeSessionCornerDefaults(void);
+static BOOL WCAtlasCornerOn(void);
+static CGFloat WCAtlasCornerValue(NSString *name, CGFloat fallback, CGFloat maximum);
+static UIColor *WCAtlasCornerPageColor(void);
+static UITableView *WCAtlasCornerTable(UIView *view);
+static UITableViewCell *WCAtlasCornerCell(UIView *view);
+static void WCAtlasCornerClearRow(UIView *item, UITableViewCell *cell);
+static void WCAtlasCornerInsetItem(UIView *item);
+static void WCAtlasCornerPaintTable(UITableView *table);
+static void WCAtlasCornerApply(UIView *item);
+static BOOL WCAtlasCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original);
 
-static void WCAtlasHomeSessionCornerUpdateGap(UITableView *table, CGFloat gap);
-static BOOL WCAtlasHomeSessionCornerIsPinned(UIView *item);
-static void WCAtlasHomeSessionCornerInsetItem(UIView *item);
-static void WCAtlasHomeSessionCornerStyleList(UITableView *table);
-static void WCAtlasHomeSessionCornerClearRow(UIView *card, UITableViewCell *cell);
-static UITableView *WCAtlasHomeSessionCornerTable(UIView *view);
-static UITableViewCell *WCAtlasHomeSessionCornerCell(UIView *view);
-static CGFloat WCAtlasHomeSessionCornerValue(NSString *name, CGFloat fallback, CGFloat maximum);
-static void WCAtlasHomeSessionCornerApply(UIView *card);
 NSString *WCAtlasHomeSessionCornerKey(NSString *name) {
     return [WCAtlasHomeSessionCornerPrefix stringByAppendingString:name];
 }
@@ -38,17 +38,16 @@ void WCAtlasInstallHomeSessionCornerDefaults(void) {
     }];
 }
 
-static BOOL WCAtlasHomeSessionCornerOn(void) {
+static BOOL WCAtlasCornerOn(void) {
     return [NSUserDefaults.standardUserDefaults boolForKey:WCAtlasHomeSessionCornerKey(@"enabled")];
 }
 
-static CGFloat WCAtlasHomeSessionCornerValue(NSString *name, CGFloat fallback, CGFloat maximum) {
+static CGFloat WCAtlasCornerValue(NSString *name, CGFloat fallback, CGFloat maximum) {
     NSNumber *number = [NSUserDefaults.standardUserDefaults objectForKey:WCAtlasHomeSessionCornerKey(name)];
     return number ? MAX(0, MIN(maximum, number.doubleValue)) : fallback;
 }
 
-
-static UIColor *WCAtlasHomeSessionCornerPageColor(void) {
+static UIColor *WCAtlasCornerPageColor(void) {
     static UIColor *color;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
@@ -61,239 +60,114 @@ static UIColor *WCAtlasHomeSessionCornerPageColor(void) {
     return color;
 }
 
-/// The row content sits four levels under the table: MainFrameItemView, a plain UIView, the cell
-/// content view, the cell, then MainFrameTableView.
-static UITableView *WCAtlasHomeSessionCornerTable(UIView *view) {
+static UITableView *WCAtlasCornerTable(UIView *view) {
     for (UIView *candidate = view; candidate; candidate = candidate.superview) {
         if ([candidate isKindOfClass:UITableView.class]) return (UITableView *)candidate;
     }
     return nil;
 }
 
-static UITableViewCell *WCAtlasHomeSessionCornerCell(UIView *view) {
+static UITableViewCell *WCAtlasCornerCell(UIView *view) {
     for (UIView *candidate = view; candidate; candidate = candidate.superview) {
         if ([candidate isKindOfClass:UITableViewCell.class]) return (UITableViewCell *)candidate;
     }
     return nil;
 }
 
-/// The whole list is the card. The reference implementation hangs its home page switch off a
-/// "main frame" setting for exactly this reason: one frame, one corner radius, no per row maths,
-/// so rows cannot end up with gaps, clipped content or a dim that is wider than the card.
-static char WCAtlasHomeSessionCornerMaskKey;
-
-/// The reference implementation masks the scroll view instead of resizing it: applyScrollCornerMask
-/// and tableCornerOutsets in that package say as much. A mask clips the list at the top and the
-/// bottom so the card ends where the screen ends, and because no frame changes the pull to refresh
-/// gesture and the table's own layout both keep working.
-static void WCAtlasHomeSessionCornerStyleList(UITableView *table) {
-    UIView *host = table.superview;
-    if (!host) return;
-    CGFloat margin = WCAtlasHomeSessionCornerValue(@"margin", 8, 24);
-    CGFloat spacing = WCAtlasHomeSessionCornerValue(@"spacing", 6, 16);
-    CGFloat radius = WCAtlasHomeSessionCornerValue(@"radius", 12, 40);
-    if (radius <= 0) radius = 12;
-    CGRect bounds = table.bounds;
-    if (bounds.size.width <= margin * 2 + 40) return;
-    if (bounds.size.height <= spacing + 40) return;
-    CGRect rect = CGRectMake(bounds.origin.x + margin,
-                             bounds.origin.y + spacing / 2.0,
-                             bounds.size.width - margin * 2,
-                             bounds.size.height - spacing);
-    CAShapeLayer *mask = objc_getAssociatedObject(table, &WCAtlasHomeSessionCornerMaskKey);
-    if (![mask isKindOfClass:CAShapeLayer.class]) {
-        mask = [CAShapeLayer layer];
-        objc_setAssociatedObject(table, &WCAtlasHomeSessionCornerMaskKey, mask, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+static void WCAtlasCornerClearRow(UIView *item, UITableViewCell *cell) {
+    if (item.backgroundColor != UIColor.clearColor) item.backgroundColor = UIColor.clearColor;
+    if (item.superview && item.superview.backgroundColor != UIColor.clearColor) {
+        item.superview.backgroundColor = UIColor.clearColor;
     }
-    // Only rebuild when the shape would actually change, so this never becomes a layout feedback
-    // loop while scrolling.
-    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:radius];
-    if (!CGPathEqualToPath(mask.path, path.CGPath)) {
-        mask.path = path.CGPath;
-    }
-    if (table.layer.mask != mask) table.layer.mask = mask;
-    // Everything inside the mask has to be transparent, otherwise WeChat's own white row
-    // backgrounds hide the card and the corners.
-    if (table.backgroundColor != UIColor.clearColor) table.backgroundColor = UIColor.clearColor;
-    WCAtlasHomeSessionCornerUpdateGap(table, spacing);
-    if (host.backgroundColor != WCAtlasHomeSessionCornerPageColor()) {
-        host.backgroundColor = WCAtlasHomeSessionCornerPageColor();
-    }
-}
-
-static void WCAtlasHomeSessionCornerClearRow(UIView *card, UITableViewCell *cell) {
-    // The rows themselves must stay transparent, otherwise WeChat's white cell background covers
-    // the card and the rounding is invisible again.
-    card.backgroundColor = UIColor.clearColor;
-    if (card.superview) card.superview.backgroundColor = UIColor.clearColor;
-    cell.contentView.backgroundColor = UIColor.clearColor;
-    cell.backgroundColor = UIColor.clearColor;
-    // Setting the inset invalidates the cell's layout, so only do it when it would change.
+    if (cell.contentView.backgroundColor != UIColor.clearColor) cell.contentView.backgroundColor = UIColor.clearColor;
+    if (cell.backgroundColor != UIColor.clearColor) cell.backgroundColor = UIColor.clearColor;
     UIEdgeInsets inset = UIEdgeInsetsMake(0, 0, 0, CGFLOAT_MAX);
     if (!UIEdgeInsetsEqualToEdgeInsets(cell.separatorInset, inset)) cell.separatorInset = inset;
 }
 
-/// The mask only clips, so the avatar and the labels would keep their old offsets and get cut on
-/// the left. Insetting the item itself moves the whole row inward, and because its frame comes from
-/// its own parent's bounds the value is stable: the same rect is computed every pass.
-static void WCAtlasHomeSessionCornerInsetItem(UIView *item) {
+/// The row shrinks from its own parent, never from the table: the table's bounds are the whole
+/// screen, and using them turned every row into a screen tall cell and blanked the page.
+static void WCAtlasCornerInsetItem(UIView *item) {
     UIView *host = item.superview;
     if (!host) return;
-    CGFloat margin = WCAtlasHomeSessionCornerValue(@"margin", 8, 24);
-    CGRect hostBounds = host.bounds;
-    if (hostBounds.size.width <= margin * 2 + 40) return;
-    CGRect target = CGRectMake(hostBounds.origin.x + margin, hostBounds.origin.y,
-                               hostBounds.size.width - margin * 2, hostBounds.size.height);
+    CGFloat margin = WCAtlasCornerValue(@"margin", 8, 24);
+    CGRect bounds = host.bounds;
+    if (bounds.size.width <= margin * 2 + 40) return;
+    CGRect target = CGRectMake(bounds.origin.x + margin, bounds.origin.y,
+                               bounds.size.width - margin * 2, bounds.size.height);
     if (!CGRectEqualToRect(item.frame, target)) item.frame = target;
 }
-/// The pinned flag lives on the session behind the row data, not on the row itself: the existing
-/// private API helper reads m_bIsTop and m_uTopTime for the same reason.
-static BOOL WCAtlasHomeSessionCornerIsPinned(UIView *item) {
-    // WeChat paints the pinned block grey; that difference is the signal we can always read.
-    if ([objc_getAssociatedObject(item, &WCAtlasHomeSessionCornerPinnedKey) boolValue]) return YES;
-    id cellData = nil;
-    @try {
-        cellData = [item valueForKey:@"m_cellData"];
-    } @catch (__unused NSException *exception) {
-        return NO;
+
+/// Only the colour of the page is handled here. Nothing about the table's size or shape is
+/// touched, so the search field, the signed in banner and the mini program panel keep working.
+static void WCAtlasCornerPaintTable(UITableView *table) {
+    if (table.backgroundColor != UIColor.clearColor) table.backgroundColor = UIColor.clearColor;
+    UIView *host = table.superview;
+    if (host && host.backgroundColor != WCAtlasCornerPageColor()) {
+        host.backgroundColor = WCAtlasCornerPageColor();
     }
-    if (!cellData) return NO;
-    for (NSString *sessionKey in @[@"session", @"sessionInfo", @"m_session"]) {
-        id session = nil;
-        @try {
-            session = [cellData valueForKey:sessionKey];
-        } @catch (__unused NSException *exception) {
-            session = nil;
-        }
-        if (!session) continue;
-        for (NSString *key in @[@"m_bIsTop", @"m_uTopTime"]) {
-            id value = nil;
-            @try {
-                value = [session valueForKey:key];
-            } @catch (__unused NSException *exception) {
-                value = nil;
-            }
-            if ([value respondsToSelector:@selector(boolValue)] && [value boolValue]) return YES;
-        }
-    }
-    return NO;
 }
 
-static char WCAtlasHomeSessionCornerGapKey;
+static void WCAtlasCornerApply(UIView *item) {
+    if (!WCAtlasCornerOn()) return;
+    UITableViewCell *cell = WCAtlasCornerCell(item);
+    UITableView *table = WCAtlasCornerTable(item);
+    if (!cell || !table) return;
+    WCAtlasCornerClearRow(item, cell);
 
-/// A page coloured band drawn over the boundary, so the pinned block and the rest read as two
-/// cards. It is an added view with its own frame, so nothing that already exists is laid out again.
-static void WCAtlasHomeSessionCornerUpdateGap(UITableView *table, CGFloat gap) {
-    UIView *band = objc_getAssociatedObject(table, &WCAtlasHomeSessionCornerGapKey);
-    if (![band isKindOfClass:UIView.class]) {
-        band = [UIView new];
-        band.userInteractionEnabled = NO;
-        objc_setAssociatedObject(table, &WCAtlasHomeSessionCornerGapKey, band, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        [table addSubview:band];
-    }
-    band.backgroundColor = WCAtlasHomeSessionCornerPageColor();
-    CGFloat boundary = -1;
-    CGFloat lastPinnedBottom = -1;
-    CGFloat firstNormalTop = -1;
-    for (UITableViewCell *cell in table.visibleCells) {
-        // The row content sits one plain UIView below the content view, so a direct child scan
-        // never found it and the band was never placed.
-        UIView *item = nil;
-        NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:cell.contentView];
-        while (queue.count > 0 && !item) {
-            UIView *view = queue.lastObject;
-            [queue removeLastObject];
-            if ([NSStringFromClass(view.class) isEqualToString:@"MainFrameItemView"]) { item = view; break; }
-            for (UIView *child in view.subviews) [queue addObject:child];
-        }
-        if (!item) continue;
-        BOOL pinned = WCAtlasHomeSessionCornerIsPinned(item);
-        CGRect frame = [item convertRect:item.bounds toView:table];
-        if (pinned) {
-            lastPinnedBottom = MAX(lastPinnedBottom, CGRectGetMaxY(frame));
-        } else if (firstNormalTop < 0) {
-            firstNormalTop = CGRectGetMinY(frame);
-        }
-    }
-    if (lastPinnedBottom >= 0 && firstNormalTop >= 0) boundary = (lastPinnedBottom + firstNormalTop) / 2.0;
-    if (boundary < 0 || gap <= 0) {
-        band.hidden = YES;
-        return;
-    }
-    band.hidden = NO;
-    CGRect target = CGRectMake(table.bounds.origin.x, boundary - gap / 2.0,
-                               table.bounds.size.width, gap);
-    if (!CGRectEqualToRect(band.frame, target)) band.frame = target;
-    if (band.superview != table) [table addSubview:band];
-}
-static void WCAtlasHomeSessionCornerApply(UIView *card) {
-    if (!WCAtlasHomeSessionCornerOn()) return;
-    UITableViewCell *cell = WCAtlasHomeSessionCornerCell(card);
-    UITableView *table = WCAtlasHomeSessionCornerTable(card);
-    if (cell) WCAtlasHomeSessionCornerClearRow(card, cell);
-    // Pinned rows are painted grey by WeChat; the card wants them white like any other row.
-    if (WCAtlasHomeSessionCornerIsPinned(card)) card.backgroundColor = UIColor.whiteColor;
-    WCAtlasHomeSessionCornerInsetItem(card);
-    if (WCAtlasHomeSessionCornerIsPinned(card)) card.backgroundColor = UIColor.whiteColor;
-    if (table) WCAtlasHomeSessionCornerStyleList(table);
+    // The corners belong to the rows, not to the scroll view. The first row rounds its top, the
+    // last row rounds its bottom, which is what makes the bottom of the list read as cut off while
+    // every row above it stays a straight edge. A mask on the table would instead clip the search
+    // field, the banner and anything WeChat lays over the page.
+    NSIndexPath *indexPath = [table indexPathForCell:cell];
+    NSInteger sections = MAX(1, (NSInteger)table.numberOfSections);
+    NSInteger rows = indexPath ? MAX(1, [table numberOfRowsInSection:indexPath.section]) : 1;
+    BOOL first = (indexPath == nil) || (indexPath.section == 0 && indexPath.row == 0);
+    BOOL last = (indexPath == nil) || (indexPath.section == sections - 1 && indexPath.row >= rows - 1);
+    CGFloat radius = WCAtlasCornerValue(@"radius", 12, 40);
+    CACornerMask corners = 0;
+    if (first) corners |= kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
+    if (last) corners |= kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
+    CGFloat wantedRadius = corners ? radius : 0;
+    CALayer *layer = item.layer;
+    if (layer.cornerRadius != wantedRadius) layer.cornerRadius = wantedRadius;
+    if (layer.cornerCurve != kCACornerCurveContinuous) layer.cornerCurve = kCACornerCurveContinuous;
+    if (layer.maskedCorners != corners) layer.maskedCorners = corners;
+    BOOL wantsClip = (corners != 0);
+    if (layer.masksToBounds != wantsClip) layer.masksToBounds = wantsClip;
+
+    WCAtlasCornerInsetItem(item);
+    WCAtlasCornerPaintTable(table);
 }
 
-static void WCAtlasHomeSessionCornerLayoutSubviews(UIView *self, SEL command) {
-    if (WCAtlasHomeSessionCornerDepth > 4) return;
-    WCAtlasHomeSessionCornerDepth++;
-    if (WCAtlasHomeSessionCornerOriginalLayout) {
-        ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalLayout)(self, command);
+static void WCAtlasCornerItemLayout(UIView *self, SEL command) {
+    if (WCAtlasCornerDepth > 4) return;
+    WCAtlasCornerDepth++;
+    if (WCAtlasCornerOriginalItemLayout) {
+        ((void (*)(id, SEL))WCAtlasCornerOriginalItemLayout)(self, command);
     }
-    WCAtlasHomeSessionCornerApply(self);
-    // The inset changes the width, but WeChat already laid the labels out for the old one,
-    // which is why the time label hung over the right edge until a later pass. Running its own
-    // layout once more settles every label inside the new width immediately.
-    if (WCAtlasHomeSessionCornerOriginalLayout) {
-        ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalLayout)(self, command);
-    }
-    WCAtlasHomeSessionCornerDepth--;
+    WCAtlasCornerApply(self);
+    WCAtlasCornerDepth--;
 }
 
-/// The row above the conversations ("signed in elsewhere") is an MFBannerBtn inside a plain
-/// MMTableViewCell rather than a conversation cell, so it needs its own hook to stay transparent
-/// and let the same card show through.
-static void WCAtlasHomeSessionCornerBannerLayoutSubviews(UIView *self, SEL command) {
-    if (WCAtlasHomeSessionCornerDepth > 4) return;
-    WCAtlasHomeSessionCornerDepth++;
-    if (WCAtlasHomeSessionCornerOriginalBannerLayout) {
-        ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalBannerLayout)(self, command);
+static void WCAtlasCornerItemBackground(UIView *self, SEL command) {
+    if (WCAtlasCornerOriginalItemBackground) {
+        ((void (*)(id, SEL))WCAtlasCornerOriginalItemBackground)(self, command);
     }
-    WCAtlasHomeSessionCornerApply(self);
-    WCAtlasHomeSessionCornerDepth--;
+    WCAtlasCornerApply(self);
 }
 
-/// WeChat repaints the row when the highlight changes; the row has to go transparent again or a
-/// single tap restores its white background on top of the card.
-static void WCAtlasHomeSessionCornerBackground(UIView *self, SEL command) {
-    UIColor *native = self.backgroundColor;
-    if (native && native != UIColor.whiteColor && native != UIColor.clearColor) {
-        CGFloat white = 0, alpha = 0;
-        if ([native getWhite:&white alpha:&alpha] && white > 0.5 && white < 0.995) {
-            objc_setAssociatedObject(self, &WCAtlasHomeSessionCornerPinnedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        }
+static void WCAtlasCornerTableLayout(UIView *self, SEL command) {
+    if (WCAtlasCornerOriginalTableLayout) {
+        ((void (*)(id, SEL))WCAtlasCornerOriginalTableLayout)(self, command);
     }
-    if (WCAtlasHomeSessionCornerOriginalBackground) {
-        ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalBackground)(self, command);
-    }
-    WCAtlasHomeSessionCornerApply(self);
+    if (!WCAtlasCornerOn()) return;
+    WCAtlasCornerPaintTable((UITableView *)self);
 }
 
-static void WCAtlasHomeSessionCornerHighlight(UIView *self, SEL command, BOOL highlighted) {
-    if (WCAtlasHomeSessionCornerOriginalHighlight) {
-        ((void (*)(id, SEL, BOOL))WCAtlasHomeSessionCornerOriginalHighlight)(self, command, highlighted);
-    }
-    WCAtlasHomeSessionCornerApply(self);
-}
-
-static BOOL WCAtlasHomeSessionCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original) {
+static BOOL WCAtlasCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original) {
     Method method = class_getInstanceMethod(cls, selector);
     if (!method) return NO;
-    // Copy first: replacing an inherited method would change the superclass instead.
     class_addMethod(cls, selector, method_getImplementation(method), method_getTypeEncoding(method));
     method = class_getInstanceMethod(cls, selector);
     if (!method) return NO;
@@ -304,67 +178,43 @@ static BOOL WCAtlasHomeSessionCornerSwizzle(Class cls, SEL selector, IMP replace
 
 NSInteger WCAtlasInstallHomeSessionCorner(void) {
     WCAtlasInstallHomeSessionCornerDefaults();
-    if (WCAtlasHomeSessionCornerHooked) return 1;
-    Class cls = NSClassFromString(@"MainFrameItemView");
-    if (!cls) return 0;
-    BOOL laidOut = WCAtlasHomeSessionCornerSwizzle(cls, @selector(layoutSubviews),
-                                                   (IMP)WCAtlasHomeSessionCornerLayoutSubviews,
-                                                   &WCAtlasHomeSessionCornerOriginalLayout);
+    if (WCAtlasCornerHooked) return 1;
+    Class itemClass = NSClassFromString(@"MainFrameItemView");
+    if (!itemClass) return 0;
+    BOOL laidOut = WCAtlasCornerSwizzle(itemClass, @selector(layoutSubviews),
+                                        (IMP)WCAtlasCornerItemLayout,
+                                        &WCAtlasCornerOriginalItemLayout);
     if (!laidOut) return 0;
-    WCAtlasHomeSessionCornerSwizzle(cls, @selector(updateBackgroundColor),
-                                    (IMP)WCAtlasHomeSessionCornerBackground,
-                                    &WCAtlasHomeSessionCornerOriginalBackground);
-    WCAtlasHomeSessionCornerSwizzle(cls, @selector(setLabelHighlighted:),
-                                    (IMP)WCAtlasHomeSessionCornerHighlight,
-                                    &WCAtlasHomeSessionCornerOriginalHighlight);
-    // The banner row is optional: if WeChat stops shipping it the list card still works, so a
-    // miss here must not fail the whole install.
-    Class bannerClass = NSClassFromString(@"MFWebMMBtn");
-    if (bannerClass) {
-        WCAtlasHomeSessionCornerSwizzle(bannerClass, @selector(layoutSubviews),
-                                        (IMP)WCAtlasHomeSessionCornerBannerLayoutSubviews,
-                                        &WCAtlasHomeSessionCornerOriginalBannerLayout);
-    }
+    WCAtlasCornerSwizzle(itemClass, @selector(updateBackgroundColor),
+                         (IMP)WCAtlasCornerItemBackground,
+                         &WCAtlasCornerOriginalItemBackground);
     Class tableClass = NSClassFromString(@"MainFrameTableView");
     if (tableClass) {
-        WCAtlasHomeSessionCornerSwizzle(tableClass, @selector(layoutSubviews),
-                                        (IMP)WCAtlasHomeSessionCornerTableLayout,
-                                        &WCAtlasHomeSessionCornerOriginalTableLayout);
+        WCAtlasCornerSwizzle(tableClass, @selector(layoutSubviews),
+                             (IMP)WCAtlasCornerTableLayout,
+                             &WCAtlasCornerOriginalTableLayout);
     }
-    WCAtlasHomeSessionCornerHooked = YES;
+    WCAtlasCornerHooked = YES;
     return 1;
 }
 
-/// Scrolling to the top makes the table re-lay itself out on its own (the refresh control changes
-/// the content inset), and that pass used to drop our frame. Hooking the table keeps the card in
-/// place without waiting for a row to lay out again.
-static void WCAtlasHomeSessionCornerTableLayout(UIView *self, SEL command) {
-    if (WCAtlasHomeSessionCornerOriginalTableLayout) {
-        ((void (*)(id, SEL))WCAtlasHomeSessionCornerOriginalTableLayout)(self, command);
-    }
-    if (!WCAtlasHomeSessionCornerOn()) return;
-    if (WCAtlasHomeSessionCornerDepth > 4) return;
-    WCAtlasHomeSessionCornerDepth++;
-    WCAtlasHomeSessionCornerStyleList((UITableView *)self);
-    WCAtlasHomeSessionCornerDepth--;
-}
-/// The row class only exists once WeChat's own image is loaded, so keep knocking instead of
-/// giving up on the first try the way the constructor-time code did before.
-static void WCAtlasHomeSessionCornerRetry(NSInteger attemptsLeft) {
+/// The row class only exists once WeChat's own image is loaded, so keep knocking instead of giving
+/// up on the first try the way a plain constructor-time call did before.
+static void WCAtlasCornerRetry(NSInteger attemptsLeft) {
     if (WCAtlasInstallHomeSessionCorner()) return;
     if (attemptsLeft <= 0) return;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)),
                    dispatch_get_main_queue(), ^{
-        WCAtlasHomeSessionCornerRetry(attemptsLeft - 1);
+        WCAtlasCornerRetry(attemptsLeft - 1);
     });
 }
 
-__attribute__((constructor)) static void WCAtlasHomeSessionCornerBootstrap(void) {
+__attribute__((constructor)) static void WCAtlasCornerBootstrap(void) {
     if (NSThread.isMainThread) {
-        WCAtlasHomeSessionCornerRetry(40);
+        WCAtlasCornerRetry(40);
         return;
     }
     dispatch_async(dispatch_get_main_queue(), ^{
-        WCAtlasHomeSessionCornerRetry(40);
+        WCAtlasCornerRetry(40);
     });
 }
