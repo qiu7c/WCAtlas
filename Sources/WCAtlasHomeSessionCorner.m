@@ -22,6 +22,7 @@ static UITableViewCell *WCAtlasCornerCell(UIView *view);
 static void WCAtlasCornerClearRow(UIView *item, UITableViewCell *cell);
 static void WCAtlasCornerInsetItem(UIView *item);
 static void WCAtlasCornerPaintTable(UITableView *table);
+static BOOL WCAtlasCornerIsPinned(UIView *item);
 static void WCAtlasCornerApply(UIView *item);
 static BOOL WCAtlasCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original);
 
@@ -54,7 +55,7 @@ static UIColor *WCAtlasCornerPageColor(void) {
         color = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
             return traits.userInterfaceStyle == UIUserInterfaceStyleDark
                 ? [UIColor colorWithWhite:0.04 alpha:1.0]
-                : [UIColor colorWithWhite:0.95 alpha:1.0];
+                : [UIColor colorWithWhite:0.92 alpha:1.0];
         }];
     });
     return color;
@@ -108,12 +109,49 @@ static void WCAtlasCornerPaintTable(UITableView *table) {
     }
 }
 
+/// MainFrameCellData is built from a session info (initWithSessionInfo:), and the pinned flag
+/// lives on that session: the existing private API helper reads m_bIsTop and m_uTopTime there.
+static BOOL WCAtlasCornerIsPinned(UIView *item) {
+    id cellData = nil;
+    @try {
+        cellData = [item valueForKey:@"m_cellData"];
+    } @catch (__unused NSException *exception) {
+        return NO;
+    }
+    if (!cellData) return NO;
+    for (NSString *key in @[@"sessionInfo", @"m_sessionInfo", @"session", @"m_session"]) {
+        id session = nil;
+        @try {
+            session = [cellData valueForKey:key];
+        } @catch (__unused NSException *exception) {
+            session = nil;
+        }
+        if (!session) continue;
+        for (NSString *flag in @[@"m_bIsTop", @"m_uTopTime"]) {
+            id value = nil;
+            @try {
+                value = [session valueForKey:flag];
+            } @catch (__unused NSException *exception) {
+                value = nil;
+            }
+            if ([value respondsToSelector:@selector(boolValue)] && [value boolValue]) return YES;
+        }
+    }
+    return NO;
+}
+
 static void WCAtlasCornerApply(UIView *item) {
     if (!WCAtlasCornerOn()) return;
     UITableViewCell *cell = WCAtlasCornerCell(item);
     UITableView *table = WCAtlasCornerTable(item);
     if (!cell || !table) return;
     WCAtlasCornerClearRow(item, cell);
+    // Pinned rows sit on a grey strip in WeChat; the card wants them white like every other row.
+    if (WCAtlasCornerIsPinned(item)) {
+        if (item.backgroundColor != UIColor.whiteColor) item.backgroundColor = UIColor.whiteColor;
+    } else if (item.backgroundColor != UIColor.clearColor) {
+        item.backgroundColor = UIColor.clearColor;
+    }
 
     // The corners belong to the rows, not to the scroll view. The first row rounds its top, the
     // last row rounds its bottom, which is what makes the bottom of the list read as cut off while
