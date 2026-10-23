@@ -8,8 +8,10 @@ static NSString *const WCAtlasHomeSessionCornerPrefix = @"com.qiu7c.wcatlas.home
 static IMP WCAtlasCornerOriginalItemLayout;
 static IMP WCAtlasCornerOriginalItemBackground;
 static IMP WCAtlasCornerOriginalTableLayout;
+static IMP WCAtlasCornerOriginalHighlight;
 static BOOL WCAtlasCornerHooked;
 static NSUInteger WCAtlasCornerDepth;
+static BOOL WCAtlasCornerFrameChanged;
 
 // Every helper is declared here so where its definition sits can never break the build again.
 NSString *WCAtlasHomeSessionCornerKey(NSString *name);
@@ -96,7 +98,10 @@ static void WCAtlasCornerInsetItem(UIView *item) {
     if (bounds.size.width <= margin * 2 + 40) return;
     CGRect target = CGRectMake(bounds.origin.x + margin, bounds.origin.y,
                                bounds.size.width - margin * 2, bounds.size.height);
-    if (!CGRectEqualToRect(item.frame, target)) item.frame = target;
+    if (!CGRectEqualToRect(item.frame, target)) {
+        item.frame = target;
+        WCAtlasCornerFrameChanged = YES;
+    }
 }
 
 /// Only the colour of the page is handled here. Nothing about the table's size or shape is
@@ -146,12 +151,9 @@ static void WCAtlasCornerApply(UIView *item) {
     UITableView *table = WCAtlasCornerTable(item);
     if (!cell || !table) return;
     WCAtlasCornerClearRow(item, cell);
-    // Pinned rows sit on a grey strip in WeChat; the card wants them white like every other row.
-    if (WCAtlasCornerIsPinned(item)) {
-        if (item.backgroundColor != UIColor.whiteColor) item.backgroundColor = UIColor.whiteColor;
-    } else if (item.backgroundColor != UIColor.clearColor) {
-        item.backgroundColor = UIColor.clearColor;
-    }
+    // Every row is a white card. A clearance row showed no card at all, so its corners had
+    // nothing to clip and the list looked like it had no rounding, while the pinned rows did.
+    if (item.backgroundColor != UIColor.whiteColor) item.backgroundColor = UIColor.whiteColor;
 
     // The corners belong to the rows, not to the scroll view. The first row rounds its top, the
     // last row rounds its bottom, which is what makes the bottom of the list read as cut off while
@@ -184,7 +186,15 @@ static void WCAtlasCornerItemLayout(UIView *self, SEL command) {
     if (WCAtlasCornerOriginalItemLayout) {
         ((void (*)(id, SEL))WCAtlasCornerOriginalItemLayout)(self, command);
     }
+    WCAtlasCornerFrameChanged = NO;
     WCAtlasCornerApply(self);
+    // The inset changes the width after WeChat already placed the labels, which is why text hung
+    // over the right edge until a scroll moved it. One more pass settles it, and it only runs on
+    // the pass where the width really changed.
+    if (WCAtlasCornerFrameChanged && WCAtlasCornerOriginalItemLayout) {
+        ((void (*)(id, SEL))WCAtlasCornerOriginalItemLayout)(self, command);
+        WCAtlasCornerFrameChanged = NO;
+    }
     WCAtlasCornerDepth--;
 }
 
@@ -193,6 +203,26 @@ static void WCAtlasCornerItemBackground(UIView *self, SEL command) {
         ((void (*)(id, SEL))WCAtlasCornerOriginalItemBackground)(self, command);
     }
     WCAtlasCornerApply(self);
+}
+
+/// The press tint is painted on the cell, which is the full width of the screen. It is moved onto
+/// the card instead, so the dimmed area stops at the rounded edge like the card itself.
+static void WCAtlasCornerItemHighlight(UIView *self, SEL command, BOOL highlighted) {
+    if (WCAtlasCornerOriginalHighlight) {
+        ((void (*)(id, SEL, BOOL))WCAtlasCornerOriginalHighlight)(self, command, highlighted);
+    }
+    if (!WCAtlasCornerOn()) return;
+    UITableViewCell *cell = WCAtlasCornerCell(self);
+    if (!cell) return;
+    if (cell.backgroundColor != UIColor.clearColor) cell.backgroundColor = UIColor.clearColor;
+    if (cell.contentView.backgroundColor != UIColor.clearColor) cell.contentView.backgroundColor = UIColor.clearColor;
+    if (self.superview && self.superview.backgroundColor != UIColor.clearColor) {
+        self.superview.backgroundColor = UIColor.clearColor;
+    }
+    UIColor *card = highlighted ? [UIColor colorWithWhite:0.88 alpha:1.0] : UIColor.whiteColor;
+    if (self.backgroundColor != card) self.backgroundColor = card;
+    UIEdgeInsets inset = UIEdgeInsetsMake(0, 0, 0, CGFLOAT_MAX);
+    if (!UIEdgeInsetsEqualToEdgeInsets(cell.separatorInset, inset)) cell.separatorInset = inset;
 }
 
 static void WCAtlasCornerTableLayout(UIView *self, SEL command) {
@@ -226,6 +256,9 @@ NSInteger WCAtlasInstallHomeSessionCorner(void) {
     WCAtlasCornerSwizzle(itemClass, @selector(updateBackgroundColor),
                          (IMP)WCAtlasCornerItemBackground,
                          &WCAtlasCornerOriginalItemBackground);
+    WCAtlasCornerSwizzle(itemClass, @selector(setLabelHighlighted:),
+                         (IMP)WCAtlasCornerItemHighlight,
+                         &WCAtlasCornerOriginalHighlight);
     Class tableClass = NSClassFromString(@"MainFrameTableView");
     if (tableClass) {
         WCAtlasCornerSwizzle(tableClass, @selector(layoutSubviews),

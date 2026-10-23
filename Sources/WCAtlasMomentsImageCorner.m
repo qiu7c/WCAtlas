@@ -44,9 +44,9 @@ static BOOL WCAtlasMomentsImageCornerIsPicture(UIView *view) {
     if ([name isEqualToString:@"WCSNSNodeVideoView"] ||
         [name isEqualToString:@"WCPlayerView"] ||
         [name isEqualToString:@"WCPlayerLayerView"]) return YES;
-    // Every media flavour is wrapped in one of these templates (grid, video, ...), so matching the
-    // prefix keeps pictures covered without listing each template that ships later.
-    return [name hasPrefix:@"WCContentItemViewTemplate"];
+    // The templates are deliberately not matched: a card template is a wide container that also
+    // holds text, so rounding it put a second, much bigger corner behind the picture and made a
+    // shared song cover look squashed. Only the picture and the video views are rounded.
 }
 
 static void WCAtlasMomentsImageCornerStyle(UIView *view, CGFloat radius) {
