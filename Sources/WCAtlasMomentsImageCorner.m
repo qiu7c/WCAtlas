@@ -8,7 +8,6 @@ static NSString *const WCAtlasMomentsImageCornerPrefix = @"com.qiu7c.wcatlas.mom
 static char WCAtlasMomentsImageCornerStyledKey;
 static NSUInteger WCAtlasMomentsImageCornerDepth;
 static IMP WCAtlasMomentsImageCornerOriginal;
-static IMP WCAtlasMomentsImageCornerOriginalCell;
 static BOOL WCAtlasMomentsImageCornerHooked;
 
 NSString *WCAtlasMomentsImageCornerKey(NSString *name) {
@@ -89,19 +88,101 @@ static void WCAtlasMomentsImageCornerLayoutSubviews(UIView *self, SEL command) {
     WCAtlasMomentsImageCornerDepth--;
 }
 
-/// The timeline cell is not the only place a moments picture shows up: the "my moments" list uses
-/// WCListPhotoCellView and friends, and the profile page shows five thumbnails in a plain cell.
-/// Hooking the shared cell class covers all of them, because they all sit in an MMTableViewCell.
-static void WCAtlasMomentsImageCornerCellLayout(UIView *self, SEL command) {
+/// Each page gets its own hook and its own saved original: two swizzles that shared a slot
+/// would end up calling each other's original instead of the one they replaced.
+
+static IMP WCAtlasMomentsImageCornerOriginalPhotoCell;
+static void WCAtlasMomentsImageCornerLayoutPhotoCell(UIView *self, SEL command) {
     if (WCAtlasMomentsImageCornerDepth > 4) return;
     WCAtlasMomentsImageCornerDepth++;
-    if (WCAtlasMomentsImageCornerOriginalCell) {
-        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalCell)(self, command);
+    if (WCAtlasMomentsImageCornerOriginalPhotoCell) {
+        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalPhotoCell)(self, command);
     }
     if (WCAtlasMomentsImageCornerOn()) {
         WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
     }
     WCAtlasMomentsImageCornerDepth--;
+}
+
+static IMP WCAtlasMomentsImageCornerOriginalSightCell;
+static void WCAtlasMomentsImageCornerLayoutSightCell(UIView *self, SEL command) {
+    if (WCAtlasMomentsImageCornerDepth > 4) return;
+    WCAtlasMomentsImageCornerDepth++;
+    if (WCAtlasMomentsImageCornerOriginalSightCell) {
+        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalSightCell)(self, command);
+    }
+    if (WCAtlasMomentsImageCornerOn()) {
+        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
+    }
+    WCAtlasMomentsImageCornerDepth--;
+}
+
+static IMP WCAtlasMomentsImageCornerOriginalHybridCell;
+static void WCAtlasMomentsImageCornerLayoutHybridCell(UIView *self, SEL command) {
+    if (WCAtlasMomentsImageCornerDepth > 4) return;
+    WCAtlasMomentsImageCornerDepth++;
+    if (WCAtlasMomentsImageCornerOriginalHybridCell) {
+        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalHybridCell)(self, command);
+    }
+    if (WCAtlasMomentsImageCornerOn()) {
+        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
+    }
+    WCAtlasMomentsImageCornerDepth--;
+}
+
+static IMP WCAtlasMomentsImageCornerOriginalProfileTable;
+static void WCAtlasMomentsImageCornerLayoutProfileTable(UIView *self, SEL command) {
+    if (WCAtlasMomentsImageCornerDepth > 4) return;
+    WCAtlasMomentsImageCornerDepth++;
+    if (WCAtlasMomentsImageCornerOriginalProfileTable) {
+        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalProfileTable)(self, command);
+    }
+    if (WCAtlasMomentsImageCornerOn()) {
+        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
+    }
+    WCAtlasMomentsImageCornerDepth--;
+}
+
+
+
+static void WCAtlasMomentsImageCornerInstallPhotoCell(void) {
+    Class cls = NSClassFromString(@"WCListPhotoCellView");
+    if (!cls) return;
+    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
+                                     (IMP)WCAtlasMomentsImageCornerLayoutPhotoCell,
+                                     &WCAtlasMomentsImageCornerOriginalPhotoCell);
+}
+
+static void WCAtlasMomentsImageCornerInstallSightCell(void) {
+    Class cls = NSClassFromString(@"WCListSightCellView");
+    if (!cls) return;
+    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
+                                     (IMP)WCAtlasMomentsImageCornerLayoutSightCell,
+                                     &WCAtlasMomentsImageCornerOriginalSightCell);
+}
+
+static void WCAtlasMomentsImageCornerInstallHybridCell(void) {
+    Class cls = NSClassFromString(@"WCListHybridCellView");
+    if (!cls) return;
+    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
+                                     (IMP)WCAtlasMomentsImageCornerLayoutHybridCell,
+                                     &WCAtlasMomentsImageCornerOriginalHybridCell);
+}
+
+static void WCAtlasMomentsImageCornerInstallProfileTable(void) {
+    Class cls = NSClassFromString(@"TextStateProfileTableView");
+    if (!cls) return;
+    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
+                                     (IMP)WCAtlasMomentsImageCornerLayoutProfileTable,
+                                     &WCAtlasMomentsImageCornerOriginalProfileTable);
+}
+
+
+static void WCAtlasMomentsImageCornerInstallPages(void) {
+    WCAtlasMomentsImageCornerInstallPhotoCell();
+    WCAtlasMomentsImageCornerInstallSightCell();
+    WCAtlasMomentsImageCornerInstallHybridCell();
+    WCAtlasMomentsImageCornerInstallProfileTable();
 }
 
 static BOOL WCAtlasMomentsImageCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original) {
@@ -115,6 +196,12 @@ static BOOL WCAtlasMomentsImageCornerSwizzle(Class cls, SEL selector, IMP replac
     return YES;
 }
 
+/// The timeline cell is the moments feed itself; the three list cells are the "my moments" page;
+/// the profile table holds the five thumbnails on a contact page. Nothing else is touched.
+static void WCAtlasMomentsImageCornerInstallPages(void) {
+    WCAtlasMomentsImageCornerInstallPages();
+}
+
 NSInteger WCAtlasInstallMomentsImageCorner(void) {
     WCAtlasInstallMomentsImageCornerDefaults();
     if (WCAtlasMomentsImageCornerHooked) return 1;
@@ -126,13 +213,9 @@ NSInteger WCAtlasInstallMomentsImageCorner(void) {
                                                     (IMP)WCAtlasMomentsImageCornerLayoutSubviews,
                                                     &WCAtlasMomentsImageCornerOriginal);
     if (!laidOut) return 0;
-    // The cells that show thumbnails everywhere else, including the profile page.
-    Class cellClass = NSClassFromString(@"MMTableViewCell");
-    if (cellClass) {
-        WCAtlasMomentsImageCornerSwizzle(cellClass, @selector(layoutSubviews),
-                                         (IMP)WCAtlasMomentsImageCornerCellLayout,
-                                         &WCAtlasMomentsImageCornerOriginalCell);
-    }
+    // Only the pages that show these pictures are hooked. A hook on MMTableViewCell would reach
+    // every table in WeChat, which is far more than this feature is allowed to touch.
+    WCAtlasMomentsImageCornerInstallPages();
     WCAtlasMomentsImageCornerHooked = YES;
     return 1;
 }
