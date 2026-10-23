@@ -92,9 +92,34 @@ static void WCAtlasMomentsImageCornerStyle(UIView *view, CGFloat radius) {
     if (!styled) objc_setAssociatedObject(view, &WCAtlasMomentsImageCornerStyledKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
+static char WCAtlasMomentsImageCornerShapeKey;
+
+/// The walk is the expensive part, not the rounding: it compares class names down the whole
+/// subtree. A cell keeps the same bounds for every scroll pass, so remembering the size and the
+/// radius and skipping the walk when neither changed makes scrolling essentially free, while a
+/// rotation or a settings change still re-walks once.
+static void WCAtlasMomentsImageCornerWalk(UIView *view, CGFloat radius, NSInteger depth);
+static void WCAtlasMomentsImageCornerWalkIfNeeded(UIView *root) {
+    CGFloat radius = WCAtlasMomentsImageCornerRadius();
+    NSString *shape = [NSString stringWithFormat:@"%.1fx%.1f@%.1f",
+                       root.bounds.size.width, root.bounds.size.height, radius];
+    if ([objc_getAssociatedObject(root, &WCAtlasMomentsImageCornerShapeKey) isEqual:shape]) return;
+    objc_setAssociatedObject(root, &WCAtlasMomentsImageCornerShapeKey, shape,
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    WCAtlasMomentsImageCornerWalk(root, radius, 0);
+}
+
 static void WCAtlasMomentsImageCornerWalk(UIView *view, CGFloat radius, NSInteger depth) {
     if (!view || depth > 6) return;
-    if (WCAtlasMomentsImageCornerIsTextBlock(view)) WCAtlasMomentsImageCornerStyle(view, radius);
+    if (WCAtlasMomentsImageCornerIsTextBlock(view)) {
+        // The grey block is a child of the cell, not the cell itself: rounding the cell rounded the
+        // full screen width and left the visible block square.
+        for (UIView *block in view.subviews) {
+            if (block.bounds.size.width < 60) continue;
+            if (block.bounds.size.width > view.bounds.size.width - 20) continue;
+            WCAtlasMomentsImageCornerStyle(block, radius);
+        }
+    }
     if (WCAtlasMomentsImageCornerIsPicture(view)) WCAtlasMomentsImageCornerStyle(view, radius);
     for (UIView *child in view.subviews) {
         WCAtlasMomentsImageCornerWalk(child, radius, depth + 1);
@@ -108,52 +133,13 @@ static void WCAtlasMomentsImageCornerLayoutSubviews(UIView *self, SEL command) {
         ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginal)(self, command);
     }
     if (WCAtlasMomentsImageCornerOn()) {
-        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
+        WCAtlasMomentsImageCornerWalkIfNeeded(self);
     }
     WCAtlasMomentsImageCornerDepth--;
 }
 
 /// Each page gets its own hook and its own saved original: two swizzles that shared a slot
 /// would end up calling each other's original instead of the one they replaced.
-
-static IMP WCAtlasMomentsImageCornerOriginalPhotoCell;
-static void WCAtlasMomentsImageCornerLayoutPhotoCell(UIView *self, SEL command) {
-    if (WCAtlasMomentsImageCornerDepth > 4) return;
-    WCAtlasMomentsImageCornerDepth++;
-    if (WCAtlasMomentsImageCornerOriginalPhotoCell) {
-        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalPhotoCell)(self, command);
-    }
-    if (WCAtlasMomentsImageCornerOn()) {
-        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
-    }
-    WCAtlasMomentsImageCornerDepth--;
-}
-
-static IMP WCAtlasMomentsImageCornerOriginalSightCell;
-static void WCAtlasMomentsImageCornerLayoutSightCell(UIView *self, SEL command) {
-    if (WCAtlasMomentsImageCornerDepth > 4) return;
-    WCAtlasMomentsImageCornerDepth++;
-    if (WCAtlasMomentsImageCornerOriginalSightCell) {
-        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalSightCell)(self, command);
-    }
-    if (WCAtlasMomentsImageCornerOn()) {
-        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
-    }
-    WCAtlasMomentsImageCornerDepth--;
-}
-
-static IMP WCAtlasMomentsImageCornerOriginalHybridCell;
-static void WCAtlasMomentsImageCornerLayoutHybridCell(UIView *self, SEL command) {
-    if (WCAtlasMomentsImageCornerDepth > 4) return;
-    WCAtlasMomentsImageCornerDepth++;
-    if (WCAtlasMomentsImageCornerOriginalHybridCell) {
-        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalHybridCell)(self, command);
-    }
-    if (WCAtlasMomentsImageCornerOn()) {
-        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
-    }
-    WCAtlasMomentsImageCornerDepth--;
-}
 
 static IMP WCAtlasMomentsImageCornerOriginalProfileTable;
 static void WCAtlasMomentsImageCornerLayoutProfileTable(UIView *self, SEL command) {
@@ -163,35 +149,9 @@ static void WCAtlasMomentsImageCornerLayoutProfileTable(UIView *self, SEL comman
         ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalProfileTable)(self, command);
     }
     if (WCAtlasMomentsImageCornerOn()) {
-        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
+        WCAtlasMomentsImageCornerWalkIfNeeded(self);
     }
     WCAtlasMomentsImageCornerDepth--;
-}
-
-
-
-static void WCAtlasMomentsImageCornerInstallPhotoCell(void) {
-    Class cls = NSClassFromString(@"WCListPhotoCellView");
-    if (!cls) return;
-    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
-                                     (IMP)WCAtlasMomentsImageCornerLayoutPhotoCell,
-                                     &WCAtlasMomentsImageCornerOriginalPhotoCell);
-}
-
-static void WCAtlasMomentsImageCornerInstallSightCell(void) {
-    Class cls = NSClassFromString(@"WCListSightCellView");
-    if (!cls) return;
-    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
-                                     (IMP)WCAtlasMomentsImageCornerLayoutSightCell,
-                                     &WCAtlasMomentsImageCornerOriginalSightCell);
-}
-
-static void WCAtlasMomentsImageCornerInstallHybridCell(void) {
-    Class cls = NSClassFromString(@"WCListHybridCellView");
-    if (!cls) return;
-    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
-                                     (IMP)WCAtlasMomentsImageCornerLayoutHybridCell,
-                                     &WCAtlasMomentsImageCornerOriginalHybridCell);
 }
 
 static void WCAtlasMomentsImageCornerInstallProfileTable(void) {
@@ -202,30 +162,6 @@ static void WCAtlasMomentsImageCornerInstallProfileTable(void) {
                                      &WCAtlasMomentsImageCornerOriginalProfileTable);
 }
 
-
-
-static IMP WCAtlasMomentsImageCornerOriginalTextCell;
-static void WCAtlasMomentsImageCornerLayoutTextCell(UIView *self, SEL command) {
-    if (WCAtlasMomentsImageCornerDepth > 4) return;
-    WCAtlasMomentsImageCornerDepth++;
-    if (WCAtlasMomentsImageCornerOriginalTextCell) {
-        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalTextCell)(self, command);
-    }
-    if (WCAtlasMomentsImageCornerOn()) {
-        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
-    }
-    WCAtlasMomentsImageCornerDepth--;
-}
-
-static void WCAtlasMomentsImageCornerInstallTextCell(void) {
-    Class cls = NSClassFromString(@"WCListTextCellView");
-    if (!cls) return;
-    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
-                                     (IMP)WCAtlasMomentsImageCornerLayoutTextCell,
-                                     &WCAtlasMomentsImageCornerOriginalTextCell);
-}
-
-
 static IMP WCAtlasMomentsImageCornerOriginalGridTemplate;
 static void WCAtlasMomentsImageCornerLayoutGridTemplate(UIView *self, SEL command) {
     if (WCAtlasMomentsImageCornerDepth > 4) return;
@@ -234,7 +170,7 @@ static void WCAtlasMomentsImageCornerLayoutGridTemplate(UIView *self, SEL comman
         ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalGridTemplate)(self, command);
     }
     if (WCAtlasMomentsImageCornerOn()) {
-        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
+        WCAtlasMomentsImageCornerWalkIfNeeded(self);
     }
     WCAtlasMomentsImageCornerDepth--;
 }
@@ -247,13 +183,33 @@ static void WCAtlasMomentsImageCornerInstallGridTemplate(void) {
                                      &WCAtlasMomentsImageCornerOriginalGridTemplate);
 }
 
+static IMP WCAtlasMomentsImageCornerOriginalListBase;
+static void WCAtlasMomentsImageCornerLayoutListBase(UIView *self, SEL command) {
+    if (WCAtlasMomentsImageCornerDepth > 4) return;
+    WCAtlasMomentsImageCornerDepth++;
+    if (WCAtlasMomentsImageCornerOriginalListBase) {
+        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalListBase)(self, command);
+    }
+    if (WCAtlasMomentsImageCornerOn()) {
+        WCAtlasMomentsImageCornerWalkIfNeeded(self);
+    }
+    WCAtlasMomentsImageCornerDepth--;
+}
+
+/// Every cell of the my moments list inherits this class, so one hook covers the photo, video,
+/// hybrid, text and feed cells, including the ones added later.
+static void WCAtlasMomentsImageCornerInstallListBase(void) {
+    Class cls = NSClassFromString(@"WCListBaseCellView");
+    if (!cls) return;
+    WCAtlasMomentsImageCornerSwizzle(cls, @selector(layoutSubviews),
+                                     (IMP)WCAtlasMomentsImageCornerLayoutListBase,
+                                     &WCAtlasMomentsImageCornerOriginalListBase);
+}
+
 static void WCAtlasMomentsImageCornerInstallPages(void) {
-    WCAtlasMomentsImageCornerInstallPhotoCell();
-    WCAtlasMomentsImageCornerInstallSightCell();
-    WCAtlasMomentsImageCornerInstallHybridCell();
     WCAtlasMomentsImageCornerInstallProfileTable();
-    WCAtlasMomentsImageCornerInstallTextCell();
     WCAtlasMomentsImageCornerInstallGridTemplate();
+    WCAtlasMomentsImageCornerInstallListBase();
 }
 
 static BOOL WCAtlasMomentsImageCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original) {
@@ -269,7 +225,6 @@ static BOOL WCAtlasMomentsImageCornerSwizzle(Class cls, SEL selector, IMP replac
 
 /// The timeline cell is the moments feed itself; the three list cells are the "my moments" page;
 /// the profile table holds the five thumbnails on a contact page. Nothing else is touched.
-
 
 NSInteger WCAtlasInstallMomentsImageCorner(void) {
     WCAtlasInstallMomentsImageCornerDefaults();
