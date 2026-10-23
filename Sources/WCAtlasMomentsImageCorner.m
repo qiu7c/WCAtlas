@@ -8,6 +8,7 @@ static NSString *const WCAtlasMomentsImageCornerPrefix = @"com.qiu7c.wcatlas.mom
 static char WCAtlasMomentsImageCornerStyledKey;
 static NSUInteger WCAtlasMomentsImageCornerDepth;
 static IMP WCAtlasMomentsImageCornerOriginal;
+static IMP WCAtlasMomentsImageCornerOriginalCell;
 static BOOL WCAtlasMomentsImageCornerHooked;
 
 NSString *WCAtlasMomentsImageCornerKey(NSString *name) {
@@ -47,6 +48,7 @@ static BOOL WCAtlasMomentsImageCornerIsPicture(UIView *view) {
     // The templates are deliberately not matched: a card template is a wide container that also
     // holds text, so rounding it put a second, much bigger corner behind the picture and made a
     // shared song cover look squashed. Only the picture and the video views are rounded.
+    return NO;
 }
 
 static void WCAtlasMomentsImageCornerStyle(UIView *view, CGFloat radius) {
@@ -68,7 +70,7 @@ static void WCAtlasMomentsImageCornerStyle(UIView *view, CGFloat radius) {
 }
 
 static void WCAtlasMomentsImageCornerWalk(UIView *view, CGFloat radius, NSInteger depth) {
-    if (!view || depth > 4) return;
+    if (!view || depth > 6) return;
     if (WCAtlasMomentsImageCornerIsPicture(view)) WCAtlasMomentsImageCornerStyle(view, radius);
     for (UIView *child in view.subviews) {
         WCAtlasMomentsImageCornerWalk(child, radius, depth + 1);
@@ -80,6 +82,21 @@ static void WCAtlasMomentsImageCornerLayoutSubviews(UIView *self, SEL command) {
     WCAtlasMomentsImageCornerDepth++;
     if (WCAtlasMomentsImageCornerOriginal) {
         ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginal)(self, command);
+    }
+    if (WCAtlasMomentsImageCornerOn()) {
+        WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
+    }
+    WCAtlasMomentsImageCornerDepth--;
+}
+
+/// The timeline cell is not the only place a moments picture shows up: the "my moments" list uses
+/// WCListPhotoCellView and friends, and the profile page shows five thumbnails in a plain cell.
+/// Hooking the shared cell class covers all of them, because they all sit in an MMTableViewCell.
+static void WCAtlasMomentsImageCornerCellLayout(UIView *self, SEL command) {
+    if (WCAtlasMomentsImageCornerDepth > 4) return;
+    WCAtlasMomentsImageCornerDepth++;
+    if (WCAtlasMomentsImageCornerOriginalCell) {
+        ((void (*)(id, SEL))WCAtlasMomentsImageCornerOriginalCell)(self, command);
     }
     if (WCAtlasMomentsImageCornerOn()) {
         WCAtlasMomentsImageCornerWalk(self, WCAtlasMomentsImageCornerRadius(), 0);
@@ -109,6 +126,13 @@ NSInteger WCAtlasInstallMomentsImageCorner(void) {
                                                     (IMP)WCAtlasMomentsImageCornerLayoutSubviews,
                                                     &WCAtlasMomentsImageCornerOriginal);
     if (!laidOut) return 0;
+    // The cells that show thumbnails everywhere else, including the profile page.
+    Class cellClass = NSClassFromString(@"MMTableViewCell");
+    if (cellClass) {
+        WCAtlasMomentsImageCornerSwizzle(cellClass, @selector(layoutSubviews),
+                                         (IMP)WCAtlasMomentsImageCornerCellLayout,
+                                         &WCAtlasMomentsImageCornerOriginalCell);
+    }
     WCAtlasMomentsImageCornerHooked = YES;
     return 1;
 }
