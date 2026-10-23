@@ -24,7 +24,6 @@ static UITableViewCell *WCAtlasCornerCell(UIView *view);
 static void WCAtlasCornerClearRow(UIView *item, UITableViewCell *cell);
 static void WCAtlasCornerInsetItem(UIView *item);
 static void WCAtlasCornerPaintTable(UITableView *table);
-static BOOL WCAtlasCornerIsPinned(UIView *item);
 static void WCAtlasCornerApply(UIView *item);
 static BOOL WCAtlasCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original);
 
@@ -112,37 +111,6 @@ static void WCAtlasCornerPaintTable(UITableView *table) {
     if (host && host.backgroundColor != WCAtlasCornerPageColor()) {
         host.backgroundColor = WCAtlasCornerPageColor();
     }
-}
-
-/// MainFrameCellData is built from a session info (initWithSessionInfo:), and the pinned flag
-/// lives on that session: the existing private API helper reads m_bIsTop and m_uTopTime there.
-static BOOL WCAtlasCornerIsPinned(UIView *item) {
-    id cellData = nil;
-    @try {
-        cellData = [item valueForKey:@"m_cellData"];
-    } @catch (__unused NSException *exception) {
-        return NO;
-    }
-    if (!cellData) return NO;
-    for (NSString *key in @[@"sessionInfo", @"m_sessionInfo", @"session", @"m_session"]) {
-        id session = nil;
-        @try {
-            session = [cellData valueForKey:key];
-        } @catch (__unused NSException *exception) {
-            session = nil;
-        }
-        if (!session) continue;
-        for (NSString *flag in @[@"m_bIsTop", @"m_uTopTime"]) {
-            id value = nil;
-            @try {
-                value = [session valueForKey:flag];
-            } @catch (__unused NSException *exception) {
-                value = nil;
-            }
-            if ([value respondsToSelector:@selector(boolValue)] && [value boolValue]) return YES;
-        }
-    }
-    return NO;
 }
 
 static void WCAtlasCornerApply(UIView *item) {
