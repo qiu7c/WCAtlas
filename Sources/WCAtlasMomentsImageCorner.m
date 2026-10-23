@@ -9,6 +9,7 @@ static char WCAtlasMomentsImageCornerStyledKey;
 static NSUInteger WCAtlasMomentsImageCornerDepth;
 static IMP WCAtlasMomentsImageCornerOriginal;
 static BOOL WCAtlasMomentsImageCornerHooked;
+static BOOL WCAtlasMomentsImageCornerSwizzle(Class cls, SEL selector, IMP replacement, IMP *original);
 
 NSString *WCAtlasMomentsImageCornerKey(NSString *name) {
     return [WCAtlasMomentsImageCornerPrefix stringByAppendingString:name];
@@ -201,9 +202,7 @@ static BOOL WCAtlasMomentsImageCornerSwizzle(Class cls, SEL selector, IMP replac
 
 /// The timeline cell is the moments feed itself; the three list cells are the "my moments" page;
 /// the profile table holds the five thumbnails on a contact page. Nothing else is touched.
-static void WCAtlasMomentsImageCornerInstallPages(void) {
-    WCAtlasMomentsImageCornerInstallPages();
-}
+
 
 NSInteger WCAtlasInstallMomentsImageCorner(void) {
     WCAtlasInstallMomentsImageCornerDefaults();
