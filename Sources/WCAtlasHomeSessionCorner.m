@@ -95,10 +95,12 @@ static void WCAtlasCornerInsetItem(UIView *item) {
     UIView *host = item.superview;
     if (!host) return;
     CGFloat margin = WCAtlasCornerValue(@"margin", 8, 24);
+    CGFloat spacing = WCAtlasCornerValue(@"spacing", 6, 24) / 2.0;
     CGRect bounds = host.bounds;
     if (bounds.size.width <= margin * 2 + 40) return;
-    CGRect target = CGRectMake(bounds.origin.x + margin, bounds.origin.y,
-                               bounds.size.width - margin * 2, bounds.size.height);
+    if (bounds.size.height <= spacing * 2 + 20) return;
+    CGRect target = CGRectMake(bounds.origin.x + margin, bounds.origin.y + spacing,
+                               bounds.size.width - margin * 2, bounds.size.height - spacing * 2);
     if (!CGRectEqualToRect(item.frame, target)) {
         item.frame = target;
         WCAtlasCornerFrameChanged = YES;
@@ -152,12 +154,15 @@ static void WCAtlasCornerApply(UIView *item) {
     NSIndexPath *indexPath = [table indexPathForCell:cell];
     NSInteger sections = MAX(1, (NSInteger)table.numberOfSections);
     NSInteger rows = indexPath ? MAX(1, [table numberOfRowsInSection:indexPath.section]) : 1;
-    BOOL first = (indexPath == nil) || (indexPath.section == 0 && indexPath.row == 0);
-    BOOL last = (indexPath == nil) || (indexPath.section == sections - 1 && indexPath.row >= rows - 1);
+    (void)sections;
+    (void)rows;
+    (void)indexPath;
+    // Every row is its own card now: it is inset on all four sides, so it gets all four corners.
+    // Rounding only the ends of the list showed nothing as soon as the list was longer than the
+    // screen, because the ends are off screen.
     CGFloat radius = WCAtlasCornerValue(@"radius", 12, 40);
-    CACornerMask corners = 0;
-    if (first) corners |= kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
-    if (last) corners |= kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
+    CACornerMask corners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner |
+                           kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
     CGFloat wantedRadius = corners ? radius : 0;
     CALayer *layer = item.layer;
     if (layer.cornerRadius != wantedRadius) layer.cornerRadius = wantedRadius;
